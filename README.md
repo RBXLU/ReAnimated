@@ -1,67 +1,86 @@
 # ReAnimated
 
-**Smooth animations for the entire Minecraft UI.** Menus, buttons, containers and the
-inventory now slide, scale and follow your cursor — without changing how the game plays.
-Pure client‑side eye‑candy, fully configurable, safe on any server.
+Клиентский мод для **Minecraft 1.21.1 (Fabric)**, добавляющий плавные анимации
+во весь интерфейс игры. Чистая косметика — на серверах не требуется, на игровой
+процесс не влияет.
 
-![icon]([assets/reanimated/icon.png](https://cdn.modrinth.com/data/cached_images/18ae1c5f86365aa33567ff4a18d1095a2d94bb5a.png))
+## Что анимируется
 
-## ✨ Features
+| # | Где | Что делает |
+|---|-----|-----------|
+| 1 | Главный экран | Логотип «Minecraft» плавно «вырастает» с лёгким отскоком; кнопки появляются из глубины с проявлением и сдвигом снизу, по очереди. |
+| 2 | Одиночная игра | Все кнопки и список миров анимированы (общая система кнопок + списков). |
+| 3 | Сетевая игра | Сохранённые серверы плавно выезжают снизу по очереди. |
+| 4 | Настройки | Все кнопки и строки настроек анимированы. |
+| 5 | Печи / сундуки / любой контейнер | Весь интерфейс плавно выезжает снизу при открытии. |
+| 6 | Инвентарь | Выделение слота (серая заливка) плавно перемещается за курсором; сам инвентарь выезжает снизу. |
+| 7 | Любая кнопка | При наведении плавно немного увеличивается, при отведении плавно возвращается. |
 
-- **Menus open smoothly** — titles **and** buttons slide up together from below (no more "levitating" text). Works on the main menu, Singleplayer, Multiplayer, Settings and every other screen automatically.
-- **Animated logo** — the *Minecraft* logo grows in with a subtle bounce on the title screen.
-- **Containers slide up** — furnaces, chests, barrels, the inventory and any other container panel smoothly slide in from the bottom, while the blurred background stays perfectly still.
-- **Following slot highlight** — the slot highlight glides smoothly across the inventory as you move the cursor, instead of snapping.
-- **Button hover scaling** — buttons gently grow when hovered and ease back when you move away.
-- **Server list** appears from the bottom as the Multiplayer screen slides in.
+Анимации применяются ко **всем** экранам и кнопкам Minecraft автоматически — не
+только к перечисленным, потому что мод цепляется к базовым классам интерфейса
+(`Screen`, `ClickableWidget`, `HandledScreen`, `EntryListWidget`, `LogoDrawer`),
+а не к каждому экрану по отдельности.
 
-## ⚙️ Configuration
+## Установка
 
-Open **Options → Video Settings → `ReAnimated settings`**.
+1. Установите [Fabric Loader](https://fabricmc.net/use/installer/) для 1.21.1.
+2. Положите в папку `mods`:
+   - `reanimated-1.0.0.jar` (из `build/libs/`)
+   - [Fabric API](https://modrinth.com/mod/fabric-api) для 1.21.1
+3. Запустите игру с профилем Fabric 1.21.1.
 
-Every animation can be tuned independently:
+## Сборка из исходников
 
-- **Enable / disable** each animation
-- **Duration** (how fast)
-- **Slide distance**
-- **Trajectory / easing** — *Linear*, *Out Cubic*, *Out Back (bounce)*, *Out Expo*
-- Hover scale amount & speed, slot‑highlight speed, and more
+Для сборки нужен **JDK 21** (Minecraft 1.21.1 требует именно его, и Fabric Loom
+требует, чтобы на Java 21 работал сам Gradle, а не только тулчейн).
 
-Settings are saved to `config/reanimated.json` and apply instantly.
+```bash
+# Linux/macOS
+JAVA_HOME=/путь/к/jdk-21 ./gradlew build
 
-## 📦 Requirements
+# Windows
+set JAVA_HOME=C:\путь\к\jdk-21
+gradlew.bat build
+```
 
-- Minecraft **1.21.1**
-- **Fabric Loader** 0.16+
-- **[Fabric API](https://modrinth.com/mod/fabric-api)**
+Готовый мод появится в `build/libs/reanimated-1.0.0.jar`.
 
-Client‑side only — not required on servers. Compatible with **Sodium** and other
-rendering mods (ReAnimated only touches GUI classes, never world rendering).
+Для запуска тестового клиента прямо из проекта:
 
-## 🧩 Compatibility notes
+```bash
+JAVA_HOME=/путь/к/jdk-21 ./gradlew runClient
+```
 
-- Animations affect *opening* screens. A close/out transition isn't included yet (planned).
+## Настройка скорости анимаций
 
----
+Все длительности, дистанции и скорости вынесены в один файл —
+[`Anim.java`](src/main/java/com/pycodder/reanimated/anim/Anim.java). Меняйте
+константы (например `WIDGET_HOVER_SCALE`, `CONTAINER_SLIDE`, `LOGO_DURATION`) и
+пересобирайте.
 
-Made with ❤️ by **[@pycodder](https://modrinth.com/user/pycodder)**
+## Известные ограничения
 
-<details>
-<summary>🇷🇺 Описание на русском</summary>
+- **Анимация закрытия** (пункты 5 и 6 — «также при закрытии»).
+  Реализована анимация **открытия**. Полноценная анимация *закрытия*
+  (контейнер/инвентарь уезжает вниз перед исчезновением) в Minecraft требует
+  отдельного «менеджера переходов», потому что после закрытия экран сразу
+  перестаёт отрисовываться. Это следующий шаг — скажите, и добавлю.
+- Логотип анимируется как эффектное «раскрытие» с отскоком, а не буквально
+  по отдельным блокам-буквам (это потребовало бы перерисовки текстуры логотипа
+  по частям). Визуально близко к задумке «появляется по блокам».
 
-**Плавные анимации для всего интерфейса Minecraft.** Меню, кнопки, контейнеры и
-инвентарь теперь плавно выезжают, увеличиваются и следуют за курсором — не влияя на
-игровой процесс. Чисто клиентский мод, полностью настраиваемый, безопасен на любом сервере.
+## Структура
 
-**Возможности:**
-- Меню открываются плавно — заголовки **и** кнопки выезжают снизу **вместе**.
-- Логотип *Minecraft* красиво вырастает с лёгким отскоком.
-- Контейнеры (печь, сундук, инвентарь и др.) плавно выезжают снизу, а размытый фон стоит на месте.
-- Подсветка слота плавно следует за курсором по инвентарю.
-- Кнопки мягко увеличиваются при наведении.
-
-**Настройки:** Настройки → Настройки графики → «Настройки ReAnimated». Для каждой
-анимации: вкл/выкл, длительность, дистанция, траектория и другое.
-
-**Требуется:** Minecraft 1.21.1, Fabric Loader, Fabric API. Только клиент.
-</details>
+```
+src/main/java/com/pycodder/reanimated/
+├── ReAnimatedClient.java         — точка входа
+├── anim/
+│   ├── Anim.java                 — общие параметры и состояние кадра
+│   └── Easing.java               — функции сглаживания
+└── mixin/
+    ├── ScreenMixin.java          — момент открытия экрана (пп. 1–4)
+    ├── ClickableWidgetMixin.java — появление + увеличение кнопок (пп. 1–4, 7)
+    ├── HandledScreenMixin.java   — выезд контейнеров + подсветка слота (пп. 5, 6)
+    ├── LogoDrawerMixin.java      — анимация логотипа (п. 1)
+    └── EntryListWidgetMixin.java — выезд элементов списков (пп. 3, 4)
+```
