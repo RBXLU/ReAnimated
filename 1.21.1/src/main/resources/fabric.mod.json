@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "reanimated",
+  "version": "${version}",
+  "name": "ReAnimated",
+  "description": "Плавные анимации для всего интерфейса Minecraft: заставка, кнопки, меню, контейнеры и инвентарь.",
+  "authors": [
+    "pycodder"
+  ],
+  "contact": {},
+  "license": "MIT",
+  "icon": "assets/reanimated/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.pycodder.reanimated.ReAnimatedClient"
+    ]
+  },
+  "mixins": [
+    "reanimated.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "1.21.1",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(java -version)",
+      "Bash(gradle --version)",
+      "Bash(timeout 8 curl -sI https://maven.fabricmc.net/)",
+      "Bash(timeout 8 curl -sI https://services.gradle.org/)",
+      "Bash(curl -s -o yarn.jar \"https://maven.fabricmc.net/net/fabricmc/yarn/1.21.1+build.3/yarn-1.21.1+build.3-v2.jar\")",
+      "Bash(unzip -o yarn.jar -d yarn)"
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "reanimated.config.title": "ReAnimated — Settings",
+  "reanimated.config.open": "ReAnimated settings",
+
+  "reanimated.opt.screen_enabled": "Menu open animation",
+  "reanimated.opt.screen_duration": "Menu — duration",
+  "reanimated.opt.screen_distance": "Menu — slide distance",
+  "reanimated.opt.screen_easing": "Menu — trajectory",
+
+  "reanimated.opt.container_enabled": "Containers animation",
+  "reanimated.opt.container_duration": "Containers — duration",
+  "reanimated.opt.container_distance": "Containers — slide distance",
+  "reanimated.opt.container_easing": "Containers — trajectory",
+
+  "reanimated.opt.hover_enabled": "Button hover scaling",
+  "reanimated.opt.hover_scale": "Hover — scale amount",
+  "reanimated.opt.hover_speed": "Hover — speed",
+
+  "reanimated.opt.slot_enabled": "Slot highlight follow",
+  "reanimated.opt.slot_speed": "Slot highlight — speed",
+
+  "reanimated.opt.logo_enabled": "Logo animation",
+  "reanimated.opt.logo_duration": "Logo — duration",
+  "reanimated.opt.logo_easing": "Logo — trajectory"
+}
