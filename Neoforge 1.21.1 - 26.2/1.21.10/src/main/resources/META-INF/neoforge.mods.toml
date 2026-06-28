@@ -1,0 +1,30 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MIT"
+issueTrackerURL = "https://modrinth.com/user/pycodder"
+
+[[mods]]
+modId = "reanimated"
+version = "1.0.0"
+displayName = "ReAnimated"
+authors = "pycodder"
+logoFile = "icon.png"
+description = '''
+Плавные анимации для всего интерфейса Minecraft: заставка, кнопки, меню, контейнеры и инвентарь.'''
+
+[[mixins]]
+config = "reanimated.mixins.json"
+
+[[dependencies.reanimated]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.10.0,)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.reanimated]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.10,1.21.11)"
+ordering = "NONE"
+side = "CLIENT"

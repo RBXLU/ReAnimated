@@ -1,0 +1,25 @@
+{
+  "reanimated.config.title": "ReAnimated — Настройки",
+  "reanimated.config.open": "Настройки ReAnimated",
+
+  "reanimated.opt.screen_enabled": "Анимация открытия меню",
+  "reanimated.opt.screen_duration": "Меню — длительность",
+  "reanimated.opt.screen_distance": "Меню — дистанция выезда",
+  "reanimated.opt.screen_easing": "Меню — траектория",
+
+  "reanimated.opt.container_enabled": "Анимация контейнеров",
+  "reanimated.opt.container_duration": "Контейнеры — длительность",
+  "reanimated.opt.container_distance": "Контейнеры — дистанция выезда",
+  "reanimated.opt.container_easing": "Контейнеры — траектория",
+
+  "reanimated.opt.hover_enabled": "Увеличение кнопок при наведении",
+  "reanimated.opt.hover_scale": "Наведение — величина увеличения",
+  "reanimated.opt.hover_speed": "Наведение — скорость",
+
+  "reanimated.opt.slot_enabled": "Следящая подсветка слота",
+  "reanimated.opt.slot_speed": "Подсветка слота — скорость",
+
+  "reanimated.opt.logo_enabled": "Анимация логотипа",
+  "reanimated.opt.logo_duration": "Логотип — длительность",
+  "reanimated.opt.logo_easing": "Логотип — траектория"
+}

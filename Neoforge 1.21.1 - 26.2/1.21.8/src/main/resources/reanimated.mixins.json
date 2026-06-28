@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.pycodder.reanimated.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "ScreenMixin",
+    "ClickableWidgetMixin",
+    "HandledScreenMixin",
+    "LogoDrawerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

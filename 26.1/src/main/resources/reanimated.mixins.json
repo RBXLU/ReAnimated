@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "package": "com.pycodder.reanimated.mixin",
+  "client": [
+    "ScreenMixin",
+    "ClickableWidgetMixin",
+    "HandledScreenMixin",
+    "LogoDrawerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -1,0 +1,44 @@
+plugins {
+    id 'java'
+    id 'net.neoforged.moddev' version '2.0.141'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
+repositories {
+    mavenCentral()
+}
+
+// NeoForge runs on Mojang official ("Mojmap") names at runtime, so mixins compiled
+// against those names resolve directly — no yarn mappings / refmap remapping needed.
+neoForge {
+    version = project.neoforge_version
+
+    runs {
+        client {
+            client()
+        }
+    }
+
+    mods {
+        reanimated {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding = "UTF-8"
+    it.options.release = 21
+}
