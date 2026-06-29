@@ -5,7 +5,7 @@ issueTrackerURL = "https://modrinth.com/user/pycodder"
 
 [[mods]]
 modId = "reanimated"
-version = "1.0.0"
+version = "1.1.0"
 displayName = "ReAnimated"
 authors = "pycodder"
 logoFile = "icon.png"
