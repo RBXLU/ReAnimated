@@ -1,6 +1,7 @@
 package com.pycodder.reanimated.config;
 
 import com.pycodder.reanimated.anim.EasingType;
+import com.pycodder.reanimated.anim.UiPreset;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
@@ -24,6 +25,7 @@ import java.util.function.Supplier;
 public class ReAnimatedConfigScreen extends Screen {
 
     private static final String AUTHOR_URL = "https://modrinth.com/user/pycodder";
+    private static final String TESTED_URL = "https://github.com/RBXLU/ReAnimated/blob/main/testedmods.txt";
     private final Screen parent;
 
     public ReAnimatedConfigScreen(Screen parent) {
@@ -36,13 +38,15 @@ public class ReAnimatedConfigScreen extends Screen {
         ReAnimatedConfig c = ReAnimatedConfig.get();
         List<AbstractWidget> rows = new ArrayList<>();
 
+        rows.add(preset("reanimated.opt.preset", () -> c.uiPreset, v -> c.uiPreset = v));
+        rows.add(ticksSlider("reanimated.opt.speed_ticks", 1, 40, c.animationSpeedTicks, v -> c.animationSpeedTicks = v));
+        rows.add(scope("reanimated.opt.animate_scope", () -> c.animateModdedScreens, v -> c.animateModdedScreens = v));
+        rows.add(toggle("reanimated.opt.close_enabled", () -> c.closeAnimationEnabled, v -> c.closeAnimationEnabled = v));
         rows.add(toggle("reanimated.opt.screen_enabled", () -> c.screenOpenEnabled, v -> c.screenOpenEnabled = v));
-        rows.add(slider("reanimated.opt.screen_duration", 0.05, 1.5, c.screenOpenDuration, " s", v -> c.screenOpenDuration = (float) v));
         rows.add(slider("reanimated.opt.screen_distance", 0, 80, c.screenOpenDistance, " px", v -> c.screenOpenDistance = (float) v));
         rows.add(easing("reanimated.opt.screen_easing", () -> c.screenOpenEasing, v -> c.screenOpenEasing = v));
 
         rows.add(toggle("reanimated.opt.container_enabled", () -> c.containerEnabled, v -> c.containerEnabled = v));
-        rows.add(slider("reanimated.opt.container_duration", 0.05, 1.5, c.containerDuration, " s", v -> c.containerDuration = (float) v));
         rows.add(slider("reanimated.opt.container_distance", 0, 120, c.containerDistance, " px", v -> c.containerDistance = (float) v));
         rows.add(easing("reanimated.opt.container_easing", () -> c.containerEasing, v -> c.containerEasing = v));
 
@@ -77,6 +81,10 @@ public class ReAnimatedConfigScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal("mod by @pycodder"),
                         b -> ConfirmLinkScreen.confirmLinkNow(this, AUTHOR_URL))
                 .bounds(4, this.height - 24, 120, 16).build());
+
+        addRenderableWidget(Button.builder(Component.translatable("reanimated.opt.tested_mods"),
+                        b -> ConfirmLinkScreen.confirmLinkNow(this, TESTED_URL))
+                .bounds(4, 4, 130, 20).build());
     }
 
     private Button toggle(String key, BooleanSupplier get, Consumer<Boolean> set) {
@@ -85,6 +93,15 @@ public class ReAnimatedConfigScreen extends Screen {
             set.accept(nv);
             ReAnimatedConfig.get().save();
             b.setMessage(boolLabel(key, nv));
+        }).bounds(0, 0, 158, 20).build();
+    }
+
+    private Button preset(String key, Supplier<UiPreset> get, Consumer<UiPreset> set) {
+        return Button.builder(presetLabel(key, get.get()), b -> {
+            UiPreset nx = UiPreset.values()[(get.get().ordinal() + 1) % UiPreset.values().length];
+            set.accept(nx);
+            ReAnimatedConfig.get().save();
+            b.setMessage(presetLabel(key, nx));
         }).bounds(0, 0, 158, 20).build();
     }
 
@@ -101,12 +118,34 @@ public class ReAnimatedConfigScreen extends Screen {
         return new ConfigSlider(key, min, max, current, unit, setter);
     }
 
+    private AbstractWidget ticksSlider(String key, int min, int max, int current, java.util.function.IntConsumer setter) {
+        return new IntConfigSlider(key, min, max, current, setter);
+    }
+
+    private Button scope(String key, BooleanSupplier get, Consumer<Boolean> set) {
+        return Button.builder(scopeLabel(key, get.getAsBoolean()), b -> {
+            boolean nv = !get.getAsBoolean();
+            set.accept(nv);
+            ReAnimatedConfig.get().save();
+            b.setMessage(scopeLabel(key, nv));
+        }).bounds(0, 0, 158, 20).build();
+    }
+
+    private static Component scopeLabel(String key, boolean all) {
+        return Component.translatable(key).append(Component.literal(": ")).append(
+            Component.translatable(all ? "reanimated.opt.animate_scope.all" : "reanimated.opt.animate_scope.vanilla"));
+    }
+
     private static Component boolLabel(String key, boolean on) {
         return Component.translatable(key).append(Component.literal(": " + (on ? "ON" : "OFF")));
     }
 
     private static Component easingLabel(String key, EasingType e) {
         return Component.translatable(key).append(Component.literal(": " + e.display));
+    }
+
+    private static Component presetLabel(String key, UiPreset p) {
+        return Component.translatable(key).append(Component.literal(": " + p.display));
     }
 
     @Override
@@ -142,6 +181,38 @@ public class ReAnimatedConfigScreen extends Screen {
         protected void applyValue() {
             double val = min + this.value * (max - min);
             setter.accept(val);
+            ReAnimatedConfig.get().save();
+        }
+    }
+
+    /** Целочисленный слайдер (тики). value: 0..1 -> [min,max]. */
+    private static class IntConfigSlider extends AbstractSliderButton {
+        private final String key;
+        private final int min;
+        private final int max;
+        private final java.util.function.IntConsumer setter;
+
+        IntConfigSlider(String key, int min, int max, int current, java.util.function.IntConsumer setter) {
+            super(0, 0, 158, 20, Component.empty(), (double) (current - min) / (max - min));
+            this.key = key;
+            this.min = min;
+            this.max = max;
+            this.setter = setter;
+            updateMessage();
+        }
+
+        private int intVal() {
+            return (int) Math.round(min + this.value * (max - min));
+        }
+
+        @Override
+        protected void updateMessage() {
+            setMessage(Component.translatable(key).append(Component.literal(": " + intVal() + " t")));
+        }
+
+        @Override
+        protected void applyValue() {
+            setter.accept(intVal());
             ReAnimatedConfig.get().save();
         }
     }

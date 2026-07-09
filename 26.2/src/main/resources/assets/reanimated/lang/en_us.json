@@ -21,5 +21,13 @@
 
   "reanimated.opt.logo_enabled": "Logo animation",
   "reanimated.opt.logo_duration": "Logo — duration",
-  "reanimated.opt.logo_easing": "Logo — trajectory"
+  "reanimated.opt.logo_easing": "Logo — trajectory",
+
+  "reanimated.opt.preset": "UI preset",
+  "reanimated.opt.speed_ticks": "Animation speed (ticks)",
+  "reanimated.opt.animate_scope": "Animate",
+  "reanimated.opt.animate_scope.all": "All UI",
+  "reanimated.opt.animate_scope.vanilla": "Vanilla only (no mods)",
+  "reanimated.opt.tested_mods": "Tested mods",
+  "reanimated.opt.close_enabled": "Close animation"
 }

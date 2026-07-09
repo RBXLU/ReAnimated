@@ -2,6 +2,14 @@
   "reanimated.config.title": "ReAnimated — Settings",
   "reanimated.config.open": "ReAnimated settings",
 
+  "reanimated.opt.preset": "UI preset",
+  "reanimated.opt.speed_ticks": "Animation speed (ticks)",
+  "reanimated.opt.animate_scope": "Animate",
+  "reanimated.opt.animate_scope.all": "All UI",
+  "reanimated.opt.animate_scope.vanilla": "Vanilla only (no mods)",
+  "reanimated.opt.close_enabled": "Close animation",
+  "reanimated.opt.tested_mods": "Tested mods",
+
   "reanimated.opt.screen_enabled": "Menu open animation",
   "reanimated.opt.screen_duration": "Menu — duration",
   "reanimated.opt.screen_distance": "Menu — slide distance",

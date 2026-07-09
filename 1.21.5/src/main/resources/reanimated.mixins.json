@@ -6,7 +6,8 @@
     "ScreenMixin",
     "ClickableWidgetMixin",
     "HandledScreenMixin",
-    "LogoDrawerMixin"
+    "LogoDrawerMixin",
+    "MinecraftClientMixin"
   ],
   "injectors": {
     "defaultRequire": 1

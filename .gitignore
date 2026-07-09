@@ -30,3 +30,5 @@ Thumbs.db
 # Run directory
 run/
 **/run/
+
+.claude

@@ -1,10 +1,12 @@
 package com.pycodder.reanimated.mixin;
 
+import com.pycodder.reanimated.anim.Anim;
 import com.pycodder.reanimated.anim.Easing;
 import com.pycodder.reanimated.config.ReAnimatedConfig;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.world.inventory.Slot;
+import org.joml.Matrix3x2fStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -13,18 +15,18 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Контейнерные экраны (Minecraft 26.x). Сам выезд панели снизу делает ScreenMixin
- * (общая обёртка), а блюр остаётся на месте (встречный сдвиг в extractBackground).
- * Здесь — только плавно догоняющая курсор подсветка слота.
- *
- * Рисуется в RETURN extractRenderState, то есть внутри общего сдвига экрана —
- * значит подсветка едет вместе со слотами.
+ * Контейнерные экраны (Minecraft 26.x). Сам выезд/масштаб панели делает ScreenMixin
+ * (общая обёртка), а блюр остаётся на месте (встречный трансформ в extractBackground).
+ * Здесь — плавно догоняющая курсор подсветка слота (рисуется в RETURN extractRenderState,
+ * то есть внутри общего трансформа экрана — значит едет вместе со слотами).
  */
 @Mixin(AbstractContainerScreen.class)
 public abstract class HandledScreenMixin {
 
     @Shadow protected int leftPos;
     @Shadow protected int topPos;
+    @Shadow protected int imageWidth;
+    @Shadow protected int imageHeight;
     @Shadow protected Slot hoveredSlot;
 
     @Unique private float reanimated$slotX = Float.NaN;

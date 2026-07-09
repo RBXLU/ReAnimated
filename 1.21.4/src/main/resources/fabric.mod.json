@@ -14,6 +14,9 @@
   "entrypoints": {
     "client": [
       "com.pycodder.reanimated.ReAnimatedClient"
+    ],
+    "modmenu": [
+      "com.pycodder.reanimated.ReAnimatedModMenu"
     ]
   },
   "mixins": [

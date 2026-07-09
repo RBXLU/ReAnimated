@@ -21,5 +21,13 @@
 
   "reanimated.opt.logo_enabled": "Анимация логотипа",
   "reanimated.opt.logo_duration": "Логотип — длительность",
-  "reanimated.opt.logo_easing": "Логотип — траектория"
+  "reanimated.opt.logo_easing": "Логотип — траектория",
+
+  "reanimated.opt.preset": "Пресет интерфейса",
+  "reanimated.opt.speed_ticks": "Скорость анимации (тики)",
+  "reanimated.opt.animate_scope": "Анимировать",
+  "reanimated.opt.animate_scope.all": "Весь интерфейс",
+  "reanimated.opt.animate_scope.vanilla": "Только ванильные (без модов)",
+  "reanimated.opt.tested_mods": "Протестированные моды",
+  "reanimated.opt.close_enabled": "Анимация закрытия"
 }

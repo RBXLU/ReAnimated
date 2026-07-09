@@ -1,10 +1,12 @@
 package com.pycodder.reanimated.config;
 
 import com.pycodder.reanimated.anim.EasingType;
+import com.pycodder.reanimated.anim.UiPreset;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.option.GameOptionsScreen;
+import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.option.SimpleOption;
 import net.minecraft.text.Text;
 import net.minecraft.util.Util;
@@ -16,25 +18,40 @@ import java.util.function.Consumer;
 public class ReAnimatedConfigScreen extends GameOptionsScreen {
 
     private static final String AUTHOR_URL = "https://modrinth.com/user/pycodder";
+    private static final String TESTED_URL = "https://github.com/RBXLU/ReAnimated/blob/main/testedmods.txt";
     private static final Text CREDIT = Text.literal("mod by @pycodder");
+    private static final Text TESTED = Text.translatable("reanimated.opt.tested_mods");
 
     public ReAnimatedConfigScreen(Screen parent) {
         super(parent, MinecraftClient.getInstance().options, Text.translatable("reanimated.config.title"));
     }
 
     @Override
+    protected void init() {
+        super.init();
+        // Настоящая кнопка (а не кликабельный текст) — гарантированно ловит клик и открывает список.
+        this.addDrawableChild(ButtonWidget.builder(TESTED,
+                        b -> Util.getOperatingSystem().open(URI.create(TESTED_URL)))
+                .dimensions(4, 4, 120, 20).build());
+    }
+
+    @Override
     protected void addOptions() {
         ReAnimatedConfig c = ReAnimatedConfig.get();
         this.body.addAll(
+            // --- Пресет + общие настройки ---
+            preset("reanimated.opt.preset", c.uiPreset, v -> c.uiPreset = v),
+            ticks("reanimated.opt.speed_ticks", 1, 40, c.animationSpeedTicks, v -> c.animationSpeedTicks = v),
+            scope("reanimated.opt.animate_scope", c.animateModdedScreens, v -> c.animateModdedScreens = v),
+            toggle("reanimated.opt.close_enabled", c.closeAnimationEnabled, v -> c.closeAnimationEnabled = v),
+
             // --- Меню (заголовки + кнопки) ---
             toggle("reanimated.opt.screen_enabled", c.screenOpenEnabled, v -> c.screenOpenEnabled = v),
-            slider("reanimated.opt.screen_duration", 0.05, 1.5, c.screenOpenDuration, " s", v -> c.screenOpenDuration = v.floatValue()),
             slider("reanimated.opt.screen_distance", 0, 80, c.screenOpenDistance, " px", v -> c.screenOpenDistance = v.floatValue()),
             easing("reanimated.opt.screen_easing", c.screenOpenEasing, v -> c.screenOpenEasing = v),
 
             // --- Контейнеры ---
             toggle("reanimated.opt.container_enabled", c.containerEnabled, v -> c.containerEnabled = v),
-            slider("reanimated.opt.container_duration", 0.05, 1.5, c.containerDuration, " s", v -> c.containerDuration = v.floatValue()),
             slider("reanimated.opt.container_distance", 0, 120, c.containerDistance, " px", v -> c.containerDistance = v.floatValue()),
             easing("reanimated.opt.container_easing", c.containerEasing, v -> c.containerEasing = v),
 
@@ -78,6 +95,55 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
         );
     }
 
+    private SimpleOption<UiPreset> preset(String key, UiPreset current, Consumer<UiPreset> setter) {
+        return new SimpleOption<>(
+            key,
+            SimpleOption.emptyTooltip(),
+            (optionText, value) -> Text.literal(value.display),
+            new SimpleOption.PotentialValuesBasedCallbacks<>(
+                java.util.Arrays.asList(UiPreset.values()),
+                com.mojang.serialization.Codec.INT.xmap(i -> UiPreset.values()[i], UiPreset::ordinal)),
+            current,
+            value -> {
+                setter.accept(value);
+                ReAnimatedConfig.get().save();
+            }
+        );
+    }
+
+    /** Слайдер целочисленной скорости в тиках. */
+    private SimpleOption<Integer> ticks(String key, int min, int max, int current, Consumer<Integer> setter) {
+        return new SimpleOption<>(
+            key,
+            SimpleOption.emptyTooltip(),
+            (optionText, value) -> Text.translatable(key).append(Text.literal(": " + value + " t")),
+            new SimpleOption.ValidatingIntSliderCallbacks(min, max),
+            current,
+            v -> {
+                setter.accept(v);
+                ReAnimatedConfig.get().save();
+            }
+        );
+    }
+
+    /** Переключатель "Весь интерфейс / Только ванильные". true = анимировать и моды. */
+    private SimpleOption<Boolean> scope(String key, boolean current, Consumer<Boolean> setter) {
+        return new SimpleOption<>(
+            key,
+            SimpleOption.emptyTooltip(),
+            (optionText, value) -> Text.translatable(key).append(Text.literal(": ")).append(
+                Text.translatable(value ? "reanimated.opt.animate_scope.all" : "reanimated.opt.animate_scope.vanilla")),
+            new SimpleOption.PotentialValuesBasedCallbacks<>(
+                java.util.Arrays.asList(Boolean.TRUE, Boolean.FALSE),
+                com.mojang.serialization.Codec.BOOL),
+            current,
+            value -> {
+                setter.accept(value);
+                ReAnimatedConfig.get().save();
+            }
+        );
+    }
+
     private SimpleOption<Integer> easing(String key, EasingType current, Consumer<EasingType> setter) {
         return new SimpleOption<>(
             key,
@@ -95,8 +161,8 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta);
-        boolean hovered = reanimated$overCredit(mouseX, mouseY);
-        context.drawTextWithShadow(this.textRenderer, CREDIT, 4, this.height - 12, hovered ? 0xFF88CCFF : 0xFF5599DD);
+        boolean overCredit = reanimated$overCredit(mouseX, mouseY);
+        context.drawTextWithShadow(this.textRenderer, CREDIT, 4, this.height - 12, overCredit ? 0xFF88CCFF : 0xFF5599DD);
     }
 
     @Override

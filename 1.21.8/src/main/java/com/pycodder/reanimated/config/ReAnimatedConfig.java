@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.pycodder.reanimated.ReAnimatedClient;
 import com.pycodder.reanimated.anim.EasingType;
+import com.pycodder.reanimated.anim.UiPreset;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.IOException;
@@ -14,6 +15,18 @@ import java.nio.file.Path;
 
 /** Конфигурация мода. Хранится в config/reanimated.json. */
 public class ReAnimatedConfig {
+
+    // --- Пресет анимации появления UI (единый для меню и контейнеров) ---
+    public UiPreset uiPreset = UiPreset.DEFAULT;
+
+    // --- Скорость всех анимаций в тиках (20 тиков = 1 сек). Меньше = быстрее. ---
+    public int animationSpeedTicks = 6;
+
+    // --- Анимировать экраны из модов? false = только ванильные (net.minecraft.*) ---
+    public boolean animateModdedScreens = true;
+
+    // --- Анимация закрытия (обратная сьемка анимации открытия) ---
+    public boolean closeAnimationEnabled = true;
 
     // --- Появление экранов меню (заголовки + кнопки выезжают снизу вместе) ---
     public boolean screenOpenEnabled = true;

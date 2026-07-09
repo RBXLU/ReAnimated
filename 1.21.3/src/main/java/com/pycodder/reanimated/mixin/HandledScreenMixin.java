@@ -15,9 +15,12 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Контейнерные экраны. Весь экран уже выезжает снизу (ScreenMixin), поэтому здесь:
- *  - возвращаем РАЗМЫТЫЙ ФОН на место (встречный сдвиг вокруг renderInGameBackground),
- *    оставляя сдвиг для текстуры панели (drawBackground) — панель едет, блюр стоит;
+ * Контейнерные экраны. Весь экран (панель, слоты, МОДЕЛЬ ИГРОКА — всё рисуется
+ * внутри renderWithTooltip) выезжает/масштабируется вместе через ScreenMixin.
+ * Здесь:
+ *  - возвращаем РАЗМЫТЫЙ ФОН на место ОБРАТНОЙ трансформацией (масштаб+сдвиг)
+ *    вокруг renderBackground, снимая её прямо перед отрисовкой панели — так
+ *    панель и модель игрока едут вместе со слотами, а блюр стоит;
  *  - рисуем плавно догоняющую курсор подсветку слота.
  */
 @Mixin(HandledScreen.class)
@@ -25,29 +28,51 @@ public abstract class HandledScreenMixin {
 
     @Shadow protected int x;
     @Shadow protected int y;
+    @Shadow protected int backgroundWidth;
+    @Shadow protected int backgroundHeight;
     @Shadow protected Slot focusedSlot;
+
+    @Unique private boolean reanimated$blurPushed = false;
 
     @Unique private float reanimated$slotX = Float.NaN;
     @Unique private float reanimated$slotY = Float.NaN;
     @Unique private long reanimated$slotTime = 0L;
 
-    // Встречный сдвиг для блюра: вернуть на место с HEAD до момента отрисовки панели.
-    @Inject(method = "renderBackground", at = @At("HEAD"))
-    private void reanimated$blurPush(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        MatrixStack m = context.getMatrices();
-        m.push();
-        m.translate(0f, -Anim.containerSlide(), 0f);
+    /** Обратная трансформация фона: обратный масштаб от центра, затем обратный сдвиг. */
+    @Unique
+    private void reanimated$applyInverse(MatrixStack m) {
+        float sy = Anim.slideY(true);
+        float sc = Anim.scale(true);
+        if (sc != 1f) {
+            net.minecraft.client.util.Window win = net.minecraft.client.MinecraftClient.getInstance().getWindow();
+            float cx = win.getScaledWidth() / 2f;
+            float cy = win.getScaledHeight() / 2f;
+            m.translate(cx, cy, 0f);
+            m.scale(1f / sc, 1f / sc, 1f);
+            m.translate(-cx, -cy, 0f);
+        }
+        m.translate(0f, -sy, 0f);
     }
 
-    // Перед самой панелью убираем встречный сдвиг — панель снова едет вместе со слотами.
+    @Inject(method = "renderBackground", at = @At("HEAD"))
+    private void reanimated$blurPush(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        reanimated$blurPushed = Anim.transformActive(true) && Anim.shouldAnimate(this);
+        if (reanimated$blurPushed) {
+            MatrixStack m = context.getMatrices();
+            m.push();
+            reanimated$applyInverse(m);
+        }
+    }
+
     @Inject(method = "renderBackground", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/gui/screen/ingame/HandledScreen;drawBackground(Lnet/minecraft/client/gui/DrawContext;FII)V",
             shift = At.Shift.BEFORE))
     private void reanimated$blurPop(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        context.getMatrices().pop();
+        if (reanimated$blurPushed) {
+            context.getMatrices().pop();
+        }
     }
 
-    // Подсветка слота — рисуется, пока активен общий сдвиг экрана, значит едет со слотами.
     @Inject(method = "render", at = @At("RETURN"))
     private void reanimated$highlight(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         ReAnimatedConfig c = ReAnimatedConfig.get();

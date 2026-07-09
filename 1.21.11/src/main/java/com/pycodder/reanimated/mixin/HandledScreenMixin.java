@@ -5,8 +5,8 @@ import com.pycodder.reanimated.anim.Easing;
 import com.pycodder.reanimated.config.ReAnimatedConfig;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.screen.slot.Slot;
 import org.joml.Matrix3x2fStack;
+import net.minecraft.screen.slot.Slot;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -15,33 +15,62 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Контейнерные экраны (1.21.6+ — Matrix3x2fStack). Весь экран выезжает (ScreenMixin),
- * здесь: возвращаем размытый фон на место (встречный сдвиг вокруг блюра, до панели),
- * и рисуем плавно догоняющую курсор подсветку слота.
+ * Контейнерные экраны. Весь экран (панель, слоты, МОДЕЛЬ ИГРОКА — всё рисуется
+ * внутри renderWithTooltip) выезжает/масштабируется вместе через ScreenMixin.
+ * Здесь:
+ *  - возвращаем РАЗМЫТЫЙ ФОН на место ОБРАТНОЙ трансформацией (масштаб+сдвиг)
+ *    вокруг renderBackground, снимая её прямо перед отрисовкой панели — так
+ *    панель и модель игрока едут вместе со слотами, а блюр стоит;
+ *  - рисуем плавно догоняющую курсор подсветку слота.
  */
 @Mixin(HandledScreen.class)
 public abstract class HandledScreenMixin {
 
     @Shadow protected int x;
     @Shadow protected int y;
+    @Shadow protected int backgroundWidth;
+    @Shadow protected int backgroundHeight;
     @Shadow protected Slot focusedSlot;
+
+    @Unique private boolean reanimated$blurPushed = false;
 
     @Unique private float reanimated$slotX = Float.NaN;
     @Unique private float reanimated$slotY = Float.NaN;
     @Unique private long reanimated$slotTime = 0L;
 
+    /** Обратная трансформация фона: обратный масштаб от центра, затем обратный сдвиг. */
+    @Unique
+    private void reanimated$applyInverse(Matrix3x2fStack m) {
+        float sy = Anim.slideY(true);
+        float sc = Anim.scale(true);
+        if (sc != 1f) {
+            net.minecraft.client.util.Window win = net.minecraft.client.MinecraftClient.getInstance().getWindow();
+            float cx = win.getScaledWidth() / 2f;
+            float cy = win.getScaledHeight() / 2f;
+            m.translate(cx, cy);
+            m.scale(1f / sc, 1f / sc);
+            m.translate(-cx, -cy);
+        }
+        m.translate(0f, -sy);
+    }
+
     @Inject(method = "renderBackground", at = @At("HEAD"))
     private void reanimated$blurPush(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        Matrix3x2fStack m = context.getMatrices();
-        m.pushMatrix();
-        m.translate(0f, -Anim.containerSlide());
+        reanimated$blurPushed = Anim.transformActive(true) && Anim.shouldAnimate(this);
+        if (reanimated$blurPushed) {
+            Matrix3x2fStack m = context.getMatrices();
+            m.pushMatrix();
+            reanimated$applyInverse(m);
+        }
     }
 
     @Inject(method = "renderBackground", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/gui/screen/ingame/HandledScreen;drawBackground(Lnet/minecraft/client/gui/DrawContext;FII)V",
             shift = At.Shift.BEFORE))
     private void reanimated$blurPop(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        context.getMatrices().popMatrix();
+        if (reanimated$blurPushed) {
+            context.getMatrices().popMatrix();
+        }
     }
 
     @Inject(method = "render", at = @At("RETURN"))

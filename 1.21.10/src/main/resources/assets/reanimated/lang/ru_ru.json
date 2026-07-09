@@ -2,6 +2,14 @@
   "reanimated.config.title": "ReAnimated — Настройки",
   "reanimated.config.open": "Настройки ReAnimated",
 
+  "reanimated.opt.preset": "Пресет анимации UI",
+  "reanimated.opt.speed_ticks": "Скорость анимации (тики)",
+  "reanimated.opt.animate_scope": "Анимировать",
+  "reanimated.opt.animate_scope.all": "Весь интерфейс",
+  "reanimated.opt.animate_scope.vanilla": "Только ванильные (без модов)",
+  "reanimated.opt.close_enabled": "Анимация закрытия",
+  "reanimated.opt.tested_mods": "Протестированные моды",
+
   "reanimated.opt.screen_enabled": "Анимация открытия меню",
   "reanimated.opt.screen_duration": "Меню — длительность",
   "reanimated.opt.screen_distance": "Меню — дистанция выезда",
