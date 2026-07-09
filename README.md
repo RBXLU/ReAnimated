@@ -1,75 +1,66 @@
 # ReAnimated
 
-Клиентский мод для **Minecraft 1.21.1 (Fabric)**, добавляющий плавные анимации
-во весь интерфейс игры. Чистая косметика — на серверах не требуется, на игровой
-процесс не влияет.
+A client-side mod for **Minecraft 1.21.1 (Fabric)** that adds smooth animations to the entire game interface. Pure cosmetics — not required on servers, doesn't affect gameplay.
 
-## Что анимируется
+## What gets animated
 
-| # | Где | Что делает |
-|---|-----|-----------|
-| 1 | Главный экран | Логотип «Minecraft» плавно «вырастает» с лёгким отскоком; кнопки появляются из глубины с проявлением и сдвигом снизу, по очереди. |
-| 2 | Одиночная игра | Все кнопки и список миров анимированы (общая система кнопок + списков). |
-| 3 | Сетевая игра | Сохранённые серверы плавно выезжают снизу по очереди. |
-| 4 | Настройки | Все кнопки и строки настроек анимированы. |
-| 5 | Печи / сундуки / любой контейнер | Весь интерфейс плавно выезжает снизу при открытии. |
-| 6 | Инвентарь | Выделение слота (серая заливка) плавно перемещается за курсором; сам инвентарь выезжает снизу. |
-| 7 | Любая кнопка | При наведении плавно немного увеличивается, при отведении плавно возвращается. |
+| # | Where | What it does |
+|---|-------|-------------|
+| 1 | Main menu | The "Minecraft" logo smoothly "grows in" with a slight bounce; buttons emerge from depth with a fade-in and upward shift, one after another. |
+| 2 | Singleplayer | All buttons and the world list are animated (shared button + list system). |
+| 3 | Multiplayer | Saved servers smoothly slide up one by one. |
+| 4 | Options | All buttons and settings rows are animated. |
+| 5 | Furnaces / chests / any container | The whole interface smoothly slides up when opened. |
+| 6 | Inventory | The slot highlight (gray fill) smoothly follows the cursor; the inventory itself slides up. |
+| 7 | Any button | On hover it smoothly scales up a little, and smoothly returns when the cursor leaves. |
 
-Анимации применяются ко **всем** экранам и кнопкам Minecraft автоматически — не
-только к перечисленным, потому что мод цепляется к базовым классам интерфейса
-(`Screen`, `ClickableWidget`, `HandledScreen`, `EntryListWidget`, `LogoDrawer`),
-а не к каждому экрану по отдельности.
+Animations apply to **all** Minecraft screens and buttons automatically — not just the ones listed — because the mod hooks into the base interface classes (`Screen`, `ClickableWidget`, `HandledScreen`, `EntryListWidget`, `LogoDrawer`) rather than each screen individually.
 
-## Установка
+## Installation
 
-1. Установите [Fabric Loader](https://fabricmc.net/use/installer/) для 1.21.1.
-2. Положите в папку `mods`:
-   - `reanimated-1.0.0.jar` (из `build/libs/`)
-   - [Fabric API](https://modrinth.com/mod/fabric-api) для 1.21.1
-3. Запустите игру с профилем Fabric 1.21.1.
+1. Install [Fabric Loader](https://fabricmc.net/use/installer/) for 1.21.1.
+2. Place the following into your `mods` folder:
+   - `reanimated-1.0.0.jar` (from `build/libs/`)
+   - [Fabric API](https://modrinth.com/mod/fabric-api) for 1.21.1
+3. Launch the game with the Fabric 1.21.1 profile.
 
-## Сборка из исходников
+## Building from source
 
-Для сборки нужен **JDK 21** (Minecraft 1.21.1 требует именно его, и Fabric Loom
-требует, чтобы на Java 21 работал сам Gradle, а не только тулчейн).
+Building requires **JDK 21** (Minecraft 1.21.1 specifically requires it, and Fabric Loom requires Gradle itself to run on Java 21, not just the toolchain).
 
 ```bash
 # Linux/macOS
-JAVA_HOME=/путь/к/jdk-21 ./gradlew build
+JAVA_HOME=/path/to/jdk-21 ./gradlew build
 
 # Windows
-set JAVA_HOME=C:\путь\к\jdk-21
+set JAVA_HOME=C:\path\to\jdk-21
 gradlew.bat build
 ```
 
-Готовый мод появится в `build/libs/reanimated-1.0.0.jar`.
+The built mod will appear at `build/libs/reanimated-1.0.0.jar`.
 
-Для запуска тестового клиента прямо из проекта:
+To run a test client straight from the project:
 
 ```bash
-JAVA_HOME=/путь/к/jdk-21 ./gradlew runClient
+JAVA_HOME=/path/to/jdk-21 ./gradlew runClient
 ```
 
-## Настройка скорости анимаций
+## Tuning animation speed
 
-Все длительности, дистанции и скорости вынесены в один файл —
-[`Anim.java`](src/main/java/com/pycodder/reanimated/anim/Anim.java). Меняйте
-константы (например `WIDGET_HOVER_SCALE`, `CONTAINER_SLIDE`, `LOGO_DURATION`) и
-пересобирайте.
+All durations, distances, and speeds are consolidated into a single file — [`Anim.java`](src/main/java/com/pycodder/reanimated/anim/Anim.java). Change the constants (e.g. `WIDGET_HOVER_SCALE`, `CONTAINER_SLIDE`, `LOGO_DURATION`) and rebuild.
 
-## Структура
+## Structure
 
 ```
 src/main/java/com/pycodder/reanimated/
-├── ReAnimatedClient.java         — точка входа
+├── ReAnimatedClient.java         — entry point
 ├── anim/
-│   ├── Anim.java                 — общие параметры и состояние кадра
-│   └── Easing.java               — функции сглаживания
+│   ├── Anim.java                 — shared parameters and per-frame state
+│   └── Easing.java               — easing functions
 └── mixin/
-    ├── ScreenMixin.java          — момент открытия экрана (пп. 1–4)
-    ├── ClickableWidgetMixin.java — появление + увеличение кнопок (пп. 1–4, 7)
-    ├── HandledScreenMixin.java   — выезд контейнеров + подсветка слота (пп. 5, 6)
-    ├── LogoDrawerMixin.java      — анимация логотипа (п. 1)
-    └── EntryListWidgetMixin.java — выезд элементов списков (пп. 3, 4)
+    ├── ScreenMixin.java          — screen-open moment (items 1–4)
+    ├── ClickableWidgetMixin.java — button appearance + scaling (items 1–4, 7)
+    ├── HandledScreenMixin.java   — container slide-in + slot highlight (items 5, 6)
+    ├── LogoDrawerMixin.java      — logo animation (item 1)
+    └── EntryListWidgetMixin.java — list-entry slide-in (items 3, 4)
 ```
