@@ -85,6 +85,12 @@ public class ReAnimatedConfigScreen extends Screen {
         addRenderableWidget(Button.builder(Component.translatable("reanimated.opt.tested_mods"),
                         b -> ConfirmLinkScreen.confirmLinkNow(this, TESTED_URL))
                 .bounds(4, 4, 130, 20).build());
+        addRenderableWidget(Button.builder(Component.translatable("reanimated.opt.profile_editor"),
+                        b -> this.minecraft.gui.setScreen(new AnimProfileEditorScreen(this)))
+                .bounds(this.width - 134, 4, 130, 20).build());
+        addRenderableWidget(Button.builder(Component.translatable("reanimated.opt.studio"),
+                        b -> this.minecraft.gui.setScreen(new AnimationStudioScreen(this)))
+                .bounds(this.width - 134, 28, 130, 20).build());
     }
 
     private Button toggle(String key, BooleanSupplier get, Consumer<Boolean> set) {

@@ -21,6 +21,8 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
     private static final String TESTED_URL = "https://github.com/RBXLU/ReAnimated/blob/main/testedmods.txt";
     private static final Text CREDIT = Text.literal("mod by @pycodder");
     private static final Text TESTED = Text.translatable("reanimated.opt.tested_mods");
+    private static final Text EDITOR = Text.translatable("reanimated.opt.profile_editor");
+    private static final Text STUDIO = Text.translatable("reanimated.opt.studio");
 
     public ReAnimatedConfigScreen(Screen parent) {
         super(parent, MinecraftClient.getInstance().options, Text.translatable("reanimated.config.title"));
@@ -33,6 +35,12 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
         this.addDrawableChild(ButtonWidget.builder(TESTED,
                         b -> Util.getOperatingSystem().open(URI.create(TESTED_URL)))
                 .dimensions(4, 4, 120, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(EDITOR,
+                        b -> this.client.setScreen(new AnimProfileEditorScreen(this)))
+                .dimensions(this.width - 124, 4, 120, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(STUDIO,
+                        b -> this.client.setScreen(new AnimationStudioScreen(this)))
+                .dimensions(this.width - 124, 28, 120, 20).build());
     }
 
     @Override

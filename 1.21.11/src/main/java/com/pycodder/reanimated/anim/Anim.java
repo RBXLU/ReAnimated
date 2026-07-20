@@ -25,6 +25,9 @@ public final class Anim {
     /** Время (millis) открытия текущего отрисовываемого экрана. 0 — нет анимации. */
     public static long currentOpenTime = 0L;
 
+    /** Количество элементов каскада на текущем экране (выставляет ScreenMixin при init). */
+    public static int cascadeCount = 1;
+
     /**
      * Время (millis) начала анимации закрытия экрана. 0 — экран не закрывается.
      * Пока это время установлено, {@code MinecraftClientMixin} отменяет реальный
@@ -34,6 +37,8 @@ public final class Anim {
     public static long closeStartTime = 0L;
     /** "Открытость" (0..1) экрана в момент, когда началось закрытие — точка старта реверса. */
     private static float closeStartProgress = 0f;
+    /** То же для профиля, но во времени (мс): точка таймлайна, с которой отматываем назад. */
+    private static float closeStartElapsedMs = 0f;
     /**
      * true между отменой настоящего {@code setScreen(null)} в {@code MinecraftClientMixin}
      * и его повторным (уже пропущенным) вызовом из {@code ScreenMixin} по завершении анимации.
@@ -47,29 +52,84 @@ public final class Anim {
     /** Запускает обратную анимацию закрытия с текущей видимой точки открытия. */
     public static void beginClose(boolean container) {
         closeStartProgress = progress(container);
+        // Точку старта реверса ограничиваем полной длительностью: иначе у экрана,
+        // открытого 10 секунд назад, реверс большую часть времени стоял бы на месте.
+        AnimProfile p = profile();
+        float openedMs = currentOpenTime <= 0L ? 0f : (System.currentTimeMillis() - currentOpenTime);
+        closeStartElapsedMs = Math.min(openedMs, p.totalMs(cascadeCount));
         closeStartTime = System.currentTimeMillis();
     }
 
     public static void finishClose() {
         closeStartTime = 0L;
         closeStartProgress = 0f;
+        closeStartElapsedMs = 0f;
     }
 
-    private static float closeElapsedNorm(boolean container) {
+    // --- Два независимых слоя закрытия ---
+    // Пресет двигает экран целиком, профиль каскадит кнопки. Оба реверсятся, каждый
+    // в своём темпе, а настоящее закрытие ждёт, пока доиграет ДОЛЬШИЙ из активных.
+
+    /** Длительность анимации ЭКРАНА (пресет), мс. 0 — пресет неактивен. */
+    private static float presetDurationMs(boolean container) {
         ReAnimatedConfig c = ReAnimatedConfig.get();
-        float e = (System.currentTimeMillis() - closeStartTime) / 1000f;
-        return Easing.clamp01(e / Math.max(0.01f, duration(c, container)));
+        boolean active = enabled(c, container) && c.uiPreset != UiPreset.NONE;
+        return active ? duration(c, container) * 1000f : 0f;
     }
 
-    /** true, когда время закрытия истекло — пора выполнить настоящий setScreen(null). */
+    /** Длительность каскада КНОПОК (профиль), мс. 0 — профиль выключен. */
+    private static float profileDurationMs() {
+        AnimProfile p = profile();
+        return p.enabled ? p.totalMs(cascadeCount) : 0f;
+    }
+
+    private static float presetCloseNorm(boolean container) {
+        float d = presetDurationMs(container);
+        if (d <= 0f) return 1f;
+        return Easing.clamp01((System.currentTimeMillis() - closeStartTime) / d);
+    }
+
+    private static float profileCloseNorm() {
+        float d = profileDurationMs();
+        if (d <= 0f) return 1f;
+        return Easing.clamp01((System.currentTimeMillis() - closeStartTime) / d);
+    }
+
+    /** true, когда доиграл дольший из активных слоёв — пора выполнить настоящий setScreen(null). */
     public static boolean closeFinished(boolean container) {
         if (!isClosing()) return true;
-        return closeElapsedNorm(container) >= 1f;
+        float max = Math.max(presetDurationMs(container), profileDurationMs());
+        if (max <= 0f) return true;
+        return (System.currentTimeMillis() - closeStartTime) >= max;
+    }
+
+    // --- Профиль анимации (редактор профиля). Когда включён — перекрывает пресеты. ---
+
+    public static AnimProfile profile() {
+        return ReAnimatedConfig.get().profile;
+    }
+
+    /**
+     * Позиция текущего экрана на таймлайне профиля (мс): растёт при открытии и
+     * отматывается назад к нулю при закрытии — так закрытие получается точным
+     * реверсом открытия, включая порядок каскада.
+     */
+    public static float profileElapsedMs() {
+        if (isClosing()) {
+            return closeStartElapsedMs * (1f - profileCloseNorm());
+        }
+        if (currentOpenTime <= 0L) return Float.MAX_VALUE;
+        return System.currentTimeMillis() - currentOpenTime;
+    }
+
+    /** Сглаженный прогресс шага каскада {@code slot} для текущего экрана. */
+    public static float profileEase(int slot) {
+        return profile().progress(profileElapsedMs(), slot);
     }
 
     /** "Виртуальный" прогресс открытия во время закрытия: едет от текущей точки к 0. */
     private static float virtualOpenProgress(boolean container) {
-        return closeStartProgress * (1f - closeElapsedNorm(container));
+        return closeStartProgress * (1f - presetCloseNorm(container));
     }
 
     public static float elapsed(long now) {
@@ -127,6 +187,8 @@ public final class Anim {
      * экран просто открыт и неподвижен, мод не добавляет ни одной операции над матрицей.
      */
     public static boolean transformActive(boolean container) {
+        // Только слой ЭКРАНА (пресет). Покнопочный слой (профиль) двигает матрицу
+        // сам в ClickableWidgetMixin и в трансформации экрана не участвует.
         return slideY(container) != 0f || scale(container) != 1f;
     }
 

@@ -5,6 +5,7 @@
   "client": [
     "ScreenMixin",
     "ClickableWidgetMixin",
+    "DrawContextScissorMixin",
     "HandledScreenMixin",
     "LogoDrawerMixin",
     "MinecraftClientMixin"

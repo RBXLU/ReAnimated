@@ -3,6 +3,7 @@ package com.pycodder.reanimated.config;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.pycodder.reanimated.ReAnimatedClient;
+import com.pycodder.reanimated.anim.AnimProfile;
 import com.pycodder.reanimated.anim.EasingType;
 import com.pycodder.reanimated.anim.UiPreset;
 import net.fabricmc.loader.api.FabricLoader;
@@ -15,6 +16,11 @@ import java.nio.file.Path;
 
 /** Конфигурация мода. Хранится в config/reanimated.json. */
 public class ReAnimatedConfig {
+
+    // --- Профиль анимации из редактора. Пока profile.enabled = false, всё ниже
+    //     работает как раньше; когда включён — профиль задаёт анимацию открытия
+    //     целиком (смещение, масштаб, прозрачность, каскад) вместо пресета. ---
+    public AnimProfile profile = new AnimProfile();
 
     // --- Пресет анимации появления UI (единый для меню и контейнеров) ---
     public UiPreset uiPreset = UiPreset.DEFAULT;
@@ -76,6 +82,10 @@ public class ReAnimatedConfig {
             try (Reader r = Files.newBufferedReader(p)) {
                 ReAnimatedConfig cfg = GSON.fromJson(r, ReAnimatedConfig.class);
                 if (cfg != null) {
+                    // Конфиг мог быть записан версией без профиля, а неизвестные
+                    // значения enum'ов Gson молча превращает в null.
+                    if (cfg.profile == null) cfg.profile = new AnimProfile();
+                    cfg.profile.sanitize();
                     return cfg;
                 }
             } catch (Exception e) {

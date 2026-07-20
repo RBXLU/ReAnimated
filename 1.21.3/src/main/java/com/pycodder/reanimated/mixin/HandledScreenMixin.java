@@ -38,20 +38,11 @@ public abstract class HandledScreenMixin {
     @Unique private float reanimated$slotY = Float.NaN;
     @Unique private long reanimated$slotTime = 0L;
 
-    /** Обратная трансформация фона: обратный масштаб от центра, затем обратный сдвиг. */
+    /** Обратная трансформация фона — та же математика, что и у обычных экранов. */
     @Unique
     private void reanimated$applyInverse(MatrixStack m) {
-        float sy = Anim.slideY(true);
-        float sc = Anim.scale(true);
-        if (sc != 1f) {
-            net.minecraft.client.util.Window win = net.minecraft.client.MinecraftClient.getInstance().getWindow();
-            float cx = win.getScaledWidth() / 2f;
-            float cy = win.getScaledHeight() / 2f;
-            m.translate(cx, cy, 0f);
-            m.scale(1f / sc, 1f / sc, 1f);
-            m.translate(-cx, -cy, 0f);
-        }
-        m.translate(0f, -sy, 0f);
+        net.minecraft.client.util.Window win = net.minecraft.client.MinecraftClient.getInstance().getWindow();
+        com.pycodder.reanimated.anim.UiTransform.inverse(m, win.getScaledWidth(), win.getScaledHeight(), true);
     }
 
     @Inject(method = "renderBackground", at = @At("HEAD"))
