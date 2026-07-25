@@ -24,13 +24,23 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *  - рисуем плавно догоняющую курсор подсветку слота.
  */
 @Mixin(HandledScreen.class)
-public abstract class HandledScreenMixin {
+public abstract class HandledScreenMixin implements com.pycodder.reanimated.anim.PanelBounds {
 
     @Shadow protected int x;
     @Shadow protected int y;
     @Shadow protected int backgroundWidth;
     @Shadow protected int backgroundHeight;
     @Shadow protected Slot focusedSlot;
+
+    @Override
+    public int reanimated$panelTop() {
+        return this.y;
+    }
+
+    @Override
+    public int reanimated$panelBottom() {
+        return this.y + this.backgroundHeight;
+    }
 
     @Unique private boolean reanimated$blurPushed = false;
 

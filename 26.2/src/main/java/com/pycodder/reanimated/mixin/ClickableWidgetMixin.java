@@ -71,7 +71,24 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
         return this.alpha;
     }
 
-    @Inject(method = "extractRenderState", at = @At("HEAD"))
+    /**
+     * Порог видимости. Ниже него ваниль (TextRenderer.tweakTransparency) считает цвет текста
+     * "почти прозрачным" и делает надпись ПОЛНОСТЬЮ непрозрачной: рамка уже невидима, а текст
+     * вспыхивает сплошным. Поэтому настолько погасший виджет не рисуем вовсе.
+     */
+    @Unique private static final float REANIMATED$MIN_ALPHA = 4f / 255f;
+
+    @Unique
+    private boolean reanimated$tooFaint() {
+        AnimProfile p = ReAnimatedConfig.get().profile;
+        if (!p.enabled || reanimated$rank < 0) {
+            return false;
+        }
+        float own = Anim.profileEase(p.slotFor(reanimated$rank, reanimated$count));
+        return this.alpha * p.alphaAt(own) < REANIMATED$MIN_ALPHA;
+    }
+
+    @Inject(method = "extractRenderState", at = @At("HEAD"), cancellable = true)
     private void reanimated$preRender(GuiGraphicsExtractor extractor, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         reanimated$pushed = 0;
         reanimated$savedAlpha = -1f;
@@ -79,6 +96,11 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
             reanimated$freezeFrame(extractor);
             return;
         }
+        if (reanimated$tooFaint()) {
+            ci.cancel();
+            return;
+        }
+
         reanimated$applyProfile(extractor);
         reanimated$applyHover(extractor);
     }

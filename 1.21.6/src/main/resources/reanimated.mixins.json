@@ -8,6 +8,8 @@
     "DrawContextScissorMixin",
     "HandledScreenMixin",
     "LogoDrawerMixin",
+    "AdvancementTabMixin",
+    "CreativeInventoryScreenMixin",
     "MinecraftClientMixin"
   ],
   "injectors": {

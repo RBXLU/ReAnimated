@@ -12,7 +12,12 @@ base {
 
 repositories {
     maven { url = 'https://maven.fabricmc.net/' }
-    maven { url = 'https://maven.terraformersmc.com/releases/' }
+    maven {
+        url = 'https://maven.terraformersmc.com/releases/'
+        // POM у terraformersmc периодически отдаёт 502 (jar при этом доступен) —
+        // резолвим ModMenu по артефакту, чтобы сборка не падала из-за флапающего .pom.
+        metadataSources { artifact() }
+    }
     mavenCentral()
 }
 
