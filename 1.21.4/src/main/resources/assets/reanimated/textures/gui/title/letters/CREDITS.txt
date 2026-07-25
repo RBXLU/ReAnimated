@@ -1,0 +1,4 @@
+These nine letter textures (m,i,n,e,c,r,a,f,t) are taken from EaseGUI by Weyne1
+(https://github.com/Weyne1/EaseGUI) and are used under the GNU Lesser General
+Public License v3.0 (LGPL-3.0). See CREDITS.md and the licenses/ folder in the
+ReAnimated project for the full attribution and license texts.

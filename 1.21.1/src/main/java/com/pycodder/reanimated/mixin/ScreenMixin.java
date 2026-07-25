@@ -1,11 +1,21 @@
 package com.pycodder.reanimated.mixin;
 
 import com.pycodder.reanimated.anim.Anim;
+import com.pycodder.reanimated.anim.AnimProfile;
+import com.pycodder.reanimated.anim.CascadeTarget;
+import com.pycodder.reanimated.anim.UiTransform;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
+import net.minecraft.client.gui.widget.ClickableWidget;
+import net.minecraft.client.gui.widget.ContainerWidget;
 import net.minecraft.client.util.math.MatrixStack;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -39,41 +49,42 @@ public abstract class ScreenMixin {
     @Inject(method = "init(Lnet/minecraft/client/MinecraftClient;II)V", at = @At("TAIL"))
     private void reanimated$onInit(MinecraftClient client, int width, int height, CallbackInfo ci) {
         reanimated$openTime = System.currentTimeMillis();
+        reanimated$assignCascade();
+    }
+
+    /**
+     * Раздаёт виджетам экрана ранг сверху вниз — из него каждый виджет считает
+     * свой шаг каскада. Ранг фиксируется здесь один раз, порядок каскада
+     * применяется уже при отрисовке, поэтому его смена в настройках видна сразу.
+     */
+    @Unique
+    private void reanimated$assignCascade() {
+        Anim.cascadeCount = 1;
+        // Без ранга виджет не каскадируется вовсе — так экраны, которые мод не
+        // анимирует (чат, экраны модов в режиме "только ванильные"), остаются нетронутыми.
+        if (!Anim.shouldAnimate(this)) {
+            return;
+        }
+        Screen self = (Screen) (Object) this;
+        List<ClickableWidget> widgets = new ArrayList<>();
+        for (Element e : self.children()) {
+            // Фреймы-списки (сервера/миры/ресурспаки/список опций) мод не анимирует
+            // вовсе — они и шага в каскаде не занимают. См. ClickableWidgetMixin.
+            if (e instanceof ClickableWidget w && w.visible && !(e instanceof ContainerWidget)) {
+                widgets.add(w);
+            }
+        }
+        widgets.sort(Comparator.comparingInt(ClickableWidget::getY).thenComparingInt(ClickableWidget::getX));
+        int count = widgets.size();
+        for (int i = 0; i < count; i++) {
+            ((CascadeTarget) widgets.get(i)).reanimated$setCascade(i, count);
+        }
+        Anim.cascadeCount = Math.max(1, count);
     }
 
     @Unique
     private boolean reanimated$isContainer() {
         return ((Object) this) instanceof HandledScreen;
-    }
-
-    /** Прямая трансформация: сдвиг по Y и масштаб от центра экрана. */
-    @Unique
-    private void reanimated$applyForward(MatrixStack m, boolean container) {
-        float sy = Anim.slideY(container);
-        float sc = Anim.scale(container);
-        m.translate(0f, sy, 0f);
-        if (sc != 1f) {
-            float cx = this.width / 2f;
-            float cy = this.height / 2f;
-            m.translate(cx, cy, 0f);
-            m.scale(sc, sc, 1f);
-            m.translate(-cx, -cy, 0f);
-        }
-    }
-
-    /** Обратная трансформация (для фона): сначала обратный масштаб, потом обратный сдвиг. */
-    @Unique
-    private void reanimated$applyInverse(MatrixStack m, boolean container) {
-        float sy = Anim.slideY(container);
-        float sc = Anim.scale(container);
-        if (sc != 1f) {
-            float cx = this.width / 2f;
-            float cy = this.height / 2f;
-            m.translate(cx, cy, 0f);
-            m.scale(1f / sc, 1f / sc, 1f);
-            m.translate(-cx, -cy, 0f);
-        }
-        m.translate(0f, -sy, 0f);
     }
 
     @Inject(method = "renderWithTooltip", at = @At("HEAD"))
@@ -84,7 +95,7 @@ public abstract class ScreenMixin {
         if (reanimated$fwdPushed) {
             MatrixStack m = context.getMatrices();
             m.push();
-            reanimated$applyForward(m, container);
+            UiTransform.forward(m, this.width, this.height, container);
         }
     }
 
@@ -116,7 +127,7 @@ public abstract class ScreenMixin {
         if (reanimated$bgPushed) {
             MatrixStack m = context.getMatrices();
             m.push();
-            reanimated$applyInverse(m, false);
+            UiTransform.inverse(m, this.width, this.height, false);
         }
     }
 

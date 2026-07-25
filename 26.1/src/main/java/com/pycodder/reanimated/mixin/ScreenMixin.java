@@ -1,10 +1,19 @@
 package com.pycodder.reanimated.mixin;
 
 import com.pycodder.reanimated.anim.Anim;
+import com.pycodder.reanimated.anim.CascadeTarget;
+import com.pycodder.reanimated.anim.UiTransform;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.AbstractContainerWidget;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import org.joml.Matrix3x2fStack;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -13,17 +22,18 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Анимация появления любого экрана для Minecraft 26.x (новый рендеринг через
- * render-state extraction). Аналог старой схемы:
+ * Анимация появления любого экрана для Minecraft 26.x (рендеринг через
+ * render-state extraction) — слой ЭКРАНА (пресет):
  *  - extractRenderStateWithTooltipAndSubtitles — внешняя точка (= renderWithTooltip),
  *    оборачиваем её общим трансформом (сдвиг/масштаб по пресету) → весь экран
  *    (текст + кнопки + панель) появляется вместе;
  *  - extractBackground — фон/блюр, возвращаем встречным трансформом, чтобы он стоял.
  *
- * Пресет ({@link Anim}/{@code UiPreset}) выбирает сдвиг снизу (DEFAULT) или масштаб
- * относительно центра (FROM_BACKGROUND / FROM_FOREGROUND).
- * GuiGraphicsExtractor.pose() возвращает тот же Matrix3x2fStack, что и раньше
- * GuiGraphics.getMatrices(), поэтому техника трансформаций переносится 1:1.
+ * Покнопочный слой (профиль/Студия) кладётся ПОВЕРХ в ClickableWidgetMixin — так
+ * пресет и профиль складываются, а не исключают друг друга.
+ *
+ * Время открытия и ранги каскада выставляются лениво при первой отрисовке;
+ * ранги переназначаются при смене размера экрана (виджеты пересоздаются).
  */
 @Mixin(Screen.class)
 public abstract class ScreenMixin {
@@ -34,38 +44,37 @@ public abstract class ScreenMixin {
     @Unique private long reanimated$openTime = 0L;
     @Unique private boolean reanimated$fwdPushed = false;
     @Unique private boolean reanimated$bgPushed = false;
+    @Unique private int reanimated$lastW = -1;
+    @Unique private int reanimated$lastH = -1;
 
     @Unique
     private boolean reanimated$isContainer() {
         return ((Object) this) instanceof AbstractContainerScreen;
     }
 
+    /** Раздаёт виджетам ранг сверху вниз — из него виджет считает свой шаг каскада. */
     @Unique
-    private void reanimated$applyForward(Matrix3x2fStack m, boolean container) {
-        float sy = Anim.slideY(container);
-        float sc = Anim.scale(container);
-        m.translate(0f, sy);
-        if (sc != 1f) {
-            float cx = this.width / 2f;
-            float cy = this.height / 2f;
-            m.translate(cx, cy);
-            m.scale(sc, sc);
-            m.translate(-cx, -cy);
+    private void reanimated$assignCascade() {
+        Anim.cascadeCount = 1;
+        // Без ранга виджет не каскадируется вовсе — так экраны, которые мод не
+        // анимирует (чат, экраны модов в режиме "только ванильные"), остаются нетронутыми.
+        if (!Anim.shouldAnimate(this)) {
+            return;
         }
-    }
-
-    @Unique
-    private void reanimated$applyInverse(Matrix3x2fStack m, boolean container) {
-        float sy = Anim.slideY(container);
-        float sc = Anim.scale(container);
-        if (sc != 1f) {
-            float cx = this.width / 2f;
-            float cy = this.height / 2f;
-            m.translate(cx, cy);
-            m.scale(1f / sc, 1f / sc);
-            m.translate(-cx, -cy);
+        Screen self = (Screen) (Object) this;
+        List<AbstractWidget> widgets = new ArrayList<>();
+        for (GuiEventListener e : self.children()) {
+            // Фреймы-списки мод не анимирует вовсе — они и шага в каскаде не занимают.
+            if (e instanceof AbstractWidget w && w.visible && !(e instanceof AbstractContainerWidget)) {
+                widgets.add(w);
+            }
         }
-        m.translate(0f, -sy);
+        widgets.sort(Comparator.comparingInt(AbstractWidget::getY).thenComparingInt(AbstractWidget::getX));
+        int count = widgets.size();
+        for (int i = 0; i < count; i++) {
+            ((CascadeTarget) widgets.get(i)).reanimated$setCascade(i, count);
+        }
+        Anim.cascadeCount = Math.max(1, count);
     }
 
     @Inject(method = "extractRenderStateWithTooltipAndSubtitles", at = @At("HEAD"))
@@ -73,13 +82,19 @@ public abstract class ScreenMixin {
         if (reanimated$openTime == 0L) {
             reanimated$openTime = System.currentTimeMillis();
         }
+        // Первый кадр или ресайз — виджеты пересозданы, раздаём ранги заново.
+        if (this.width != reanimated$lastW || this.height != reanimated$lastH) {
+            reanimated$lastW = this.width;
+            reanimated$lastH = this.height;
+            reanimated$assignCascade();
+        }
         Anim.currentOpenTime = reanimated$openTime;
         boolean container = reanimated$isContainer();
         reanimated$fwdPushed = Anim.transformActive(container) && Anim.shouldAnimate(this);
         if (reanimated$fwdPushed) {
             Matrix3x2fStack m = extractor.pose();
             m.pushMatrix();
-            reanimated$applyForward(m, container);
+            UiTransform.forward(m, this.width, this.height, container);
         }
     }
 
@@ -109,7 +124,7 @@ public abstract class ScreenMixin {
         if (reanimated$bgPushed) {
             Matrix3x2fStack m = extractor.pose();
             m.pushMatrix();
-            reanimated$applyInverse(m, container);
+            UiTransform.inverse(m, this.width, this.height, container);
         }
     }
 

@@ -1,5 +1,6 @@
 package com.pycodder.reanimated.mixin;
 
+import com.pycodder.reanimated.ReAnimatedClient;
 import com.pycodder.reanimated.anim.Anim;
 import com.pycodder.reanimated.anim.UiPreset;
 import com.pycodder.reanimated.config.ReAnimatedConfig;
@@ -8,6 +9,7 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -22,6 +24,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class MinecraftClientMixin {
 
     @Shadow public Screen currentScreen;
+
+    @Unique private String reanimated$closeName = null;
+    @Unique private boolean reanimated$closeNameResolved = false;
 
     @Inject(method = "setScreen", at = @At("HEAD"), cancellable = true)
     private void reanimated$onSetScreen(Screen screen, CallbackInfo ci) {
@@ -47,12 +52,70 @@ public abstract class MinecraftClientMixin {
 
         Screen current = this.currentScreen;
         if (current == null) return;
+        if (!reanimated$safeToDefer(current)) return;
 
         boolean container = current instanceof HandledScreen;
-        boolean enabledFlag = container ? c.containerEnabled : c.screenOpenEnabled;
-        if (!enabledFlag || c.uiPreset == UiPreset.NONE) return;
+        // Откладываем закрытие, если играет ЛЮБОЙ слой: пресет (экран) ИЛИ профиль
+        // (кнопки). Иначе там, где открытие анимируется одним из слоёв, закрытие
+        // молчало бы.
+        boolean presetActive = (container ? c.containerEnabled : c.screenOpenEnabled)
+                && c.uiPreset != UiPreset.NONE;
+        boolean profileActive = c.profile.enabled;
+        if (!presetActive && !profileActive) return;
 
         Anim.beginClose(container);
         ci.cancel();
+    }
+
+    /**
+     * Можно ли держать этот экран открытым ради анимации закрытия.
+     *
+     * Нельзя, если экран переопределил close() сам: его код успевает отработать
+     * ДО нашей отмены setScreen(null) — например, освободить кадровый буфер и
+     * обнулить ссылку, — а мы после этого продолжаем рисовать экран ещё доли
+     * секунды и получаем краш на первом же кадре. Так падал экран схемы из мода
+     * simulated (NPE в DiagramScreen.renderFBO), и так упадёт любой экран,
+     * убирающий за собой в close().
+     *
+     * Экранам с ванильным close() это не грозит: он ничего не разрушает, а
+     * removed() (где ванильные экраны прибираются) вызывается из setScreen —
+     * то есть только когда мы наконец пропустим настоящее закрытие.
+     */
+    @Unique
+    private boolean reanimated$safeToDefer(Screen screen) {
+        String name = reanimated$closeMethodName();
+        if (name == null) return false;
+        try {
+            Class<?> owner = screen.getClass().getMethod(name).getDeclaringClass();
+            return owner.getName().startsWith("net.minecraft.");
+        } catch (Throwable t) {
+            return false; // не смогли выяснить — не рискуем, закрываем мгновенно
+        }
+    }
+
+    /**
+     * Имя Screen.close() в текущей среде: yarn в разработке, intermediary в обычной
+     * сборке, mojmap под Sinytra Connector. Рефлексия по строке не ремапится, поэтому
+     * берём то имя, которое реально есть у класса. Определяется один раз.
+     */
+    @Unique
+    private String reanimated$closeMethodName() {
+        if (!reanimated$closeNameResolved) {
+            reanimated$closeNameResolved = true;
+            for (String candidate : new String[] {"method_25419", "close", "onClose"}) {
+                try {
+                    Screen.class.getMethod(candidate);
+                    reanimated$closeName = candidate;
+                    break;
+                } catch (NoSuchMethodException ignored) {
+                    // не эти маппинги — пробуем следующее имя
+                }
+            }
+            if (reanimated$closeName == null) {
+                ReAnimatedClient.LOGGER.warn(
+                    "[ReAnimated] Screen.close() not found in this mapping environment — close animation disabled");
+            }
+        }
+        return reanimated$closeName;
     }
 }

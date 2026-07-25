@@ -24,7 +24,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *  - рисуем плавно догоняющую курсор подсветку слота.
  */
 @Mixin(HandledScreen.class)
-public abstract class HandledScreenMixin {
+public abstract class HandledScreenMixin implements com.pycodder.reanimated.anim.PanelBounds {
 
     @Shadow protected int x;
     @Shadow protected int y;
@@ -32,26 +32,27 @@ public abstract class HandledScreenMixin {
     @Shadow protected int backgroundHeight;
     @Shadow protected Slot focusedSlot;
 
+    @Override
+    public int reanimated$panelTop() {
+        return this.y;
+    }
+
+    @Override
+    public int reanimated$panelBottom() {
+        return this.y + this.backgroundHeight;
+    }
+
     @Unique private boolean reanimated$blurPushed = false;
 
     @Unique private float reanimated$slotX = Float.NaN;
     @Unique private float reanimated$slotY = Float.NaN;
     @Unique private long reanimated$slotTime = 0L;
 
-    /** Обратная трансформация фона: обратный масштаб от центра, затем обратный сдвиг. */
+    /** Обратная трансформация фона — та же математика, что и у обычных экранов. */
     @Unique
     private void reanimated$applyInverse(MatrixStack m) {
-        float sy = Anim.slideY(true);
-        float sc = Anim.scale(true);
-        if (sc != 1f) {
-            net.minecraft.client.util.Window win = net.minecraft.client.MinecraftClient.getInstance().getWindow();
-            float cx = win.getScaledWidth() / 2f;
-            float cy = win.getScaledHeight() / 2f;
-            m.translate(cx, cy, 0f);
-            m.scale(1f / sc, 1f / sc, 1f);
-            m.translate(-cx, -cy, 0f);
-        }
-        m.translate(0f, -sy, 0f);
+        net.minecraft.client.util.Window win = net.minecraft.client.MinecraftClient.getInstance().getWindow();
+        com.pycodder.reanimated.anim.UiTransform.inverse(m, win.getScaledWidth(), win.getScaledHeight(), true);
     }
 
     @Inject(method = "renderBackground", at = @At("HEAD"))

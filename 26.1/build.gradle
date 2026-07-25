@@ -12,6 +12,12 @@ base {
 
 repositories {
     maven { url = 'https://maven.fabricmc.net/' }
+    maven {
+        url = 'https://maven.terraformersmc.com/releases/'
+        // POM у terraformersmc периодически отдаёт 502 (jar при этом доступен) —
+        // резолвим ModMenu по артефакту, чтобы сборка не падала из-за флапающего .pom.
+        metadataSources { artifact() }
+    }
     mavenCentral()
 }
 
@@ -21,6 +27,9 @@ dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     implementation "net.fabricmc:fabric-loader:${project.loader_version}"
     implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    // ModMenu — только для компиляции интеграции; не тащим в jar, не делаем зависимостью.
+    // 26.x уже деобфусцирован, поэтому обычный compileOnly (без remap).
+    compileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
 }
 
 processResources {

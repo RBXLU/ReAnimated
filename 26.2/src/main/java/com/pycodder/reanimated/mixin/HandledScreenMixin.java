@@ -21,12 +21,22 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * то есть внутри общего трансформа экрана — значит едет вместе со слотами).
  */
 @Mixin(AbstractContainerScreen.class)
-public abstract class HandledScreenMixin {
+public abstract class HandledScreenMixin implements com.pycodder.reanimated.anim.PanelBounds {
 
     @Shadow protected int leftPos;
     @Shadow protected int topPos;
     @Shadow protected int imageWidth;
     @Shadow protected int imageHeight;
+
+    @Override
+    public int reanimated$panelTop() {
+        return this.topPos;
+    }
+
+    @Override
+    public int reanimated$panelBottom() {
+        return this.topPos + this.imageHeight;
+    }
     @Shadow protected Slot hoveredSlot;
 
     @Unique private float reanimated$slotX = Float.NaN;
