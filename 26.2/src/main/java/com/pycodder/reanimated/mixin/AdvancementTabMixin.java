@@ -54,6 +54,11 @@ public abstract class AdvancementTabMixin {
 
         int sw = context.guiWidth();
         int winY = (context.guiHeight() - REANIMATED$WINDOW_HEIGHT) / 2; // окно центрировано
+        // Окно во весь экран — полосы над ним нет; scissor нулевой высоты падает
+        // "Scissor size must be >0", поэтому просто не анимируем вкладку.
+        if (sw <= 0 || winY <= 0) {
+            return;
+        }
         context.enableScissor(0, 0, sw, winY);
         Matrix3x2fStack m = context.pose();
         m.pushMatrix();

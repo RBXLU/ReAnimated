@@ -53,11 +53,15 @@ public class CreativeInventoryScreenMixin {
         int sw = context.guiWidth();
         int sh = context.guiHeight();
         PanelBounds panel = (PanelBounds) (Object) this;
-        if (top) {
-            context.enableScissor(0, 0, sw, panel.reanimated$panelTop());
-        } else {
-            context.enableScissor(0, panel.reanimated$panelBottom(), sw, sh);
+        // Полоса за краем панели, в которой вкладке разрешено показываться.
+        int clipTop = top ? 0 : panel.reanimated$panelBottom();
+        int clipBottom = top ? panel.reanimated$panelTop() : sh;
+        // Пустая или вывернутая полоса (панель прижата к краю экрана) — scissor такое не принимает
+        // и падает "Scissor size must be >0". Тогда просто не анимируем вкладку.
+        if (sw <= 0 || clipBottom <= clipTop) {
+            return;
         }
+        context.enableScissor(0, clipTop, sw, clipBottom);
         Matrix3x2fStack m = context.pose();
         m.pushMatrix();
         m.translate(0f, dy);
