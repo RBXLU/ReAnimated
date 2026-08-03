@@ -61,6 +61,8 @@ There's a separate download for each Minecraft version. The GUI rendering change
 
 > Each file is pinned to one Minecraft version — pick the one that matches your game. The mod version looks like `<Minecraft version>+<mod version>`, e.g. `1.21.1+1.4.0`.
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/N1N7225QLU)
+
 ---
 
 Made with ❤️ by **[@pycodder](https://modrinth.com/user/pycodder)**
@@ -103,9 +105,7 @@ Fabric / Quilt + Fabric API, Minecraft **1.21.1 – 1.21.11**, а также с�
 
 **NeoForge:** сборки есть, но пока на версии **1.2.1** — Fabric-линейка ушла вперёд, так что каскада логотипа, анимации вкладок и секций в настройках в NeoForge-файлах ещё нет.
 
-### Благодарности
-
-**Побуквенный каскад логотипа** (идея + текстуры букв) и идея **каскада вкладок** — из мода [**EaseGUI**](https://github.com/Weyne1/EaseGUI) (Weyne1), под лицензией **LGPL-3.0**. Полная атрибуция — в [`CREDITS.md`](CREDITS.md) и папке [`licenses/`](licenses/).
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/N1N7225QLU)
 
 </details>
 =======
