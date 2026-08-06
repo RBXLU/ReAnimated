@@ -264,11 +264,15 @@ public class AnimProfileEditorScreen extends Screen {
         context.centeredText(font, PREVIEW, previewX + PREVIEW_W / 2, 30, 0xFFAAAAAA);
 
         context.fill(listX - 6, listTop - 4, listX + LIST_W + 6, listBottom + 4, 0xB0000000);
-        context.enableScissor(listX - 6, listTop, listX + LIST_W + 6, listBottom);
-        for (Row row : rows) {
-            row.extractRenderState(context, mouseX, mouseY, delta);
+        // Только если для списка есть высота: обрезка нулевой/отрицательной высоты
+        // роняет игру на 26.2 ("Scissor size must be >0").
+        if (listBottom > listTop) {
+            context.enableScissor(listX - 6, listTop, listX + LIST_W + 6, listBottom);
+            for (Row row : rows) {
+                row.extractRenderState(context, mouseX, mouseY, delta);
+            }
+            context.disableScissor();
         }
-        context.disableScissor();
 
         renderScrollbar(context);
         renderPreview(context, delta);
@@ -297,6 +301,10 @@ public class AnimProfileEditorScreen extends Screen {
 
         float pivotX = previewX + PREVIEW_W * working.pivot.fx;
 
+        // Нет высоты — нет превью: вырожденная обрезка роняет игру на 26.2.
+        if (listBottom <= listTop) {
+            return;
+        }
         context.enableScissor(previewX - PREVIEW_MARGIN, listTop, previewX + PREVIEW_W + PREVIEW_MARGIN, listBottom);
         for (int i = 0; i < previewButtons.size(); i++) {
             Button button = previewButtons.get(i);

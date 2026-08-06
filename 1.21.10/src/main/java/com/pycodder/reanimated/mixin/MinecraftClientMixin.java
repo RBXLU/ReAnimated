@@ -2,7 +2,6 @@ package com.pycodder.reanimated.mixin;
 
 import com.pycodder.reanimated.ReAnimatedClient;
 import com.pycodder.reanimated.anim.Anim;
-import com.pycodder.reanimated.anim.UiPreset;
 import com.pycodder.reanimated.config.ReAnimatedConfig;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
@@ -55,8 +54,8 @@ public abstract class MinecraftClientMixin {
         if (!reanimated$safeToDefer(current)) return;
 
         boolean container = current instanceof HandledScreen;
-        boolean presetActive = (container ? c.containerEnabled : c.screenOpenEnabled)
-                && c.uiPreset != UiPreset.NONE;
+        Anim.currentIsPause = Anim.isPauseScreen(current);
+        boolean presetActive = Anim.presetLayerActive(container);
         boolean profileActive = c.profile.enabled;
         if (!presetActive && !profileActive) return;
 

@@ -2,7 +2,6 @@ package com.pycodder.reanimated.mixin;
 
 import com.pycodder.reanimated.ReAnimatedClient;
 import com.pycodder.reanimated.anim.Anim;
-import com.pycodder.reanimated.anim.UiPreset;
 import com.pycodder.reanimated.config.ReAnimatedConfig;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
@@ -57,9 +56,9 @@ public abstract class MinecraftClientMixin {
         boolean container = current instanceof HandledScreen;
         // Откладываем закрытие, если играет ЛЮБОЙ слой: пресет (экран) ИЛИ профиль
         // (кнопки). Иначе там, где открытие анимируется одним из слоёв, закрытие
-        // молчало бы.
-        boolean presetActive = (container ? c.containerEnabled : c.screenOpenEnabled)
-                && c.uiPreset != UiPreset.NONE;
+        // молчало бы. Набор настроек выбирает сам Anim — у меню паузы он свой.
+        Anim.currentIsPause = Anim.isPauseScreen(current);
+        boolean presetActive = Anim.presetLayerActive(container);
         boolean profileActive = c.profile.enabled;
         if (!presetActive && !profileActive) return;
 

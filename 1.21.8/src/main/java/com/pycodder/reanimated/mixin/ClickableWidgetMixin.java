@@ -18,6 +18,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
  * Фреймы-списки ({@code ContainerWidget}) исключены отсюда полностью — они не едут,
@@ -45,6 +46,8 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
 
     @Unique private float reanimated$hover = 0f;
     @Unique private long reanimated$lastTime = 0L;
+    /** Момент нажатия на эту кнопку; 0 — анимация вдавливания не играет. */
+    @Unique private long reanimated$pressTime = 0L;
     @Unique private int reanimated$pushed = 0;
     @Unique private float reanimated$savedAlpha = -1f;
 
@@ -103,7 +106,50 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
         }
 
         reanimated$applyProfile(context);
+        if (reanimated$isTextField()) {
+            return; // поле ввода под курсором не трогаем — см. reanimated$isTextField
+        }
         reanimated$applyHover(context);
+        reanimated$applyPress(context);
+    }
+
+    /**
+     * Поля ввода из наведения и нажатия исключены. Масштаб — чисто визуальный: клики,
+     * курсор и выделение текста ваниль считает по НЕмасштабированным координатам, поэтому
+     * увеличенное поле «плывёт» под мышью и попасть в нужный символ становится нечем.
+     * Каскад появления ({@code applyProfile}) полям оставлен — он отыгрывает один раз
+     * при открытии экрана и с вводом не пересекается.
+     */
+    @Unique
+    private boolean reanimated$isTextField() {
+        return (Object) this instanceof net.minecraft.client.gui.widget.TextFieldWidget;
+    }
+
+    /**
+     * Отметка нажатия. Цепляемся к звуку клика, а не к {@code onClick}: ваниль играет
+     * его и при клике мышью, и при нажатии Enter/Пробела на выбранной кнопке, и делает
+     * это уже после проверок active/visible. Так вдавливание срабатывает ровно тогда,
+     * когда кнопка действительно сработала.
+     */
+    @Inject(method = "playDownSound", at = @At("HEAD"))
+    private void reanimated$onDown(net.minecraft.client.sound.SoundManager soundManager, CallbackInfo ci) {
+        if (ReAnimatedConfig.get().pressEnabled) {
+            reanimated$pressTime = System.currentTimeMillis();
+        }
+    }
+
+    /**
+     * Второй триггер нажатия — сам клик мышью. Одного {@code playDownSound} мало:
+     * ваниль переопределяет его пустым у слайдеров (они не щёлкают) и своим у полей
+     * ввода, так что до базовой реализации — а значит и до нас — вызов не доходит и
+     * ползунок «проседал» бы только от клавиатуры. Отмечаем на RETURN и только если
+     * виджет клик действительно принял.
+     */
+    @Inject(method = "mouseClicked", at = @At("RETURN"))
+    private void reanimated$onMouseDown(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
+        if (Boolean.TRUE.equals(cir.getReturnValue()) && ReAnimatedConfig.get().pressEnabled) {
+            reanimated$pressTime = System.currentTimeMillis();
+        }
     }
 
     /**
@@ -196,6 +242,31 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
         }
 
         float scale = 1f + c.hoverScale * reanimated$hover;
+        Matrix3x2fStack matrices = context.getMatrices();
+        matrices.pushMatrix();
+        reanimated$pushed++;
+        UiTransform.pivotScale(matrices, getX() + getWidth() / 2f, getY() + getHeight() / 2f, scale, scale);
+    }
+
+    /**
+     * Вдавливание при нажатии: кнопка быстро уменьшается и упруго возвращается
+     * ({@link Easing#press}). Играет поверх наведения — они складываются, поэтому
+     * нажатая кнопка остаётся увеличенной под курсором и «проседает» из этого состояния.
+     */
+    @Unique
+    private void reanimated$applyPress(DrawContext context) {
+        if (reanimated$pressTime == 0L) {
+            return;
+        }
+        ReAnimatedConfig c = ReAnimatedConfig.get();
+        float durationMs = Math.max(0.01f, c.pressDuration) * 1000f;
+        float t = (System.currentTimeMillis() - reanimated$pressTime) / durationMs;
+        if (t >= 1f || !c.pressEnabled) {
+            reanimated$pressTime = 0L; // отыграла (или выключили в настройках)
+            return;
+        }
+
+        float scale = 1f - c.pressScale * Easing.press(t);
         Matrix3x2fStack matrices = context.getMatrices();
         matrices.pushMatrix();
         reanimated$pushed++;

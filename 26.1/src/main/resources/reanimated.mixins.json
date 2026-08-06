@@ -4,7 +4,6 @@
   "client": [
     "ScreenMixin",
     "ClickableWidgetMixin",
-    "DrawContextScissorMixin",
     "HandledScreenMixin",
     "LogoDrawerMixin",
     "AdvancementTabMixin",

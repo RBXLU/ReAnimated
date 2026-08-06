@@ -31,6 +31,8 @@ public class ReAnimatedConfigScreen extends Screen {
     private static final String AUTHOR_URL = "https://modrinth.com/user/pycodder";
     private static final String TESTED_URL = "https://github.com/RBXLU/ReAnimated/blob/main/testedmods.txt";
     private final Screen parent;
+    /** Строка с результатом обмена настройками; создаётся в init(). */
+    private StringWidget notice;
 
     public ReAnimatedConfigScreen(Screen parent) {
         super(Component.translatable("reanimated.config.title"));
@@ -49,11 +51,19 @@ public class ReAnimatedConfigScreen extends Screen {
         rows.add(ticksSlider("reanimated.opt.speed_ticks", 1, 40, c.animationSpeedTicks, v -> c.animationSpeedTicks = v));
         rows.add(scope("reanimated.opt.animate_scope", () -> c.animateModdedScreens, v -> c.animateModdedScreens = v));
         rows.add(toggle("reanimated.opt.close_enabled", () -> c.closeAnimationEnabled, v -> c.closeAnimationEnabled = v));
+        rows.add(toggle("reanimated.opt.bg_fade", () -> c.bgFadeEnabled, v -> c.bgFadeEnabled = v));
 
         rows.add("reanimated.section.menu");
         rows.add(toggle("reanimated.opt.screen_enabled", () -> c.screenOpenEnabled, v -> c.screenOpenEnabled = v));
         rows.add(slider("reanimated.opt.screen_distance", 0, 80, c.screenOpenDistance, " px", v -> c.screenOpenDistance = (float) v));
         rows.add(easing("reanimated.opt.screen_easing", () -> c.screenOpenEasing, v -> c.screenOpenEasing = v));
+
+        rows.add("reanimated.section.pause");
+        rows.add(toggle("reanimated.opt.pause_enabled", () -> c.pauseEnabled, v -> c.pauseEnabled = v));
+        rows.add(pausePreset("reanimated.opt.pause_preset", () -> c.pausePreset, v -> c.pausePreset = v));
+        rows.add(ticksSlider("reanimated.opt.pause_speed_ticks", 1, 40, c.pauseSpeedTicks, v -> c.pauseSpeedTicks = v));
+        rows.add(slider("reanimated.opt.pause_distance", 0, 80, c.pauseDistance, " px", v -> c.pauseDistance = (float) v));
+        rows.add(easing("reanimated.opt.pause_easing", () -> c.pauseEasing, v -> c.pauseEasing = v));
 
         rows.add("reanimated.section.containers");
         rows.add(toggle("reanimated.opt.container_enabled", () -> c.containerEnabled, v -> c.containerEnabled = v));
@@ -64,6 +74,9 @@ public class ReAnimatedConfigScreen extends Screen {
         rows.add(toggle("reanimated.opt.hover_enabled", () -> c.hoverEnabled, v -> c.hoverEnabled = v));
         rows.add(slider("reanimated.opt.hover_scale", 0.0, 0.3, c.hoverScale, "", v -> c.hoverScale = (float) v));
         rows.add(slider("reanimated.opt.hover_speed", 2, 30, c.hoverSpeed, "", v -> c.hoverSpeed = (float) v));
+        rows.add(toggle("reanimated.opt.press_enabled", () -> c.pressEnabled, v -> c.pressEnabled = v));
+        rows.add(slider("reanimated.opt.press_scale", 0.0, 0.3, c.pressScale, "", v -> c.pressScale = (float) v));
+        rows.add(slider("reanimated.opt.press_duration", 0.05, 0.6, c.pressDuration, " s", v -> c.pressDuration = (float) v));
         rows.add(toggle("reanimated.opt.slot_enabled", () -> c.slotHighlightEnabled, v -> c.slotHighlightEnabled = v));
         rows.add(slider("reanimated.opt.slot_speed", 4, 40, c.slotHighlightSpeed, "", v -> c.slotHighlightSpeed = (float) v));
 
@@ -132,6 +145,49 @@ public class ReAnimatedConfigScreen extends Screen {
         addRenderableWidget(Button.builder(Component.translatable("reanimated.opt.studio"),
                         b -> this.minecraft.setScreen(new AnimationStudioScreen(this)))
                 .bounds(this.width - 134, 28, 130, 20).build());
+        addRenderableWidget(Button.builder(Component.translatable("reanimated.opt.export"),
+                        b -> this.exportSettings())
+                .bounds(4, 28, 63, 20).build());
+        addRenderableWidget(Button.builder(Component.translatable("reanimated.opt.import"),
+                        b -> this.importSettings())
+                .bounds(71, 28, 63, 20).build());
+        this.notice = new StringWidget(Component.empty(), this.font);
+        this.notice.setWidth(this.width - 8);
+        this.notice.setX(4);
+        this.notice.setY(this.height - 44);
+        addRenderableWidget(this.notice);
+    }
+
+    /** Кладёт все настройки в буфер обмена одной строкой — можно передать другому игроку. */
+    private void exportSettings() {
+        this.minecraft.keyboardHandler.setClipboard(ReAnimatedConfig.get().toShareString());
+        this.showNotice("reanimated.opt.export.done", false);
+    }
+
+    /**
+     * Забирает настройки из буфера обмена. Экран после этого пересобирается: кнопки и
+     * слайдеры читают значения в момент создания, иначе показывали бы старые.
+     */
+    private void importSettings() {
+        String text = this.minecraft.keyboardHandler.getClipboard();
+        if (ReAnimatedConfig.applyShareString(text)) {
+            this.rebuildWidgets();
+            this.showNotice("reanimated.opt.import.done", false);
+        } else {
+            this.showNotice("reanimated.opt.import.failed", true);
+        }
+    }
+
+    /**
+     * Показывает результат обмена настройками. В 26.x у экрана нет render(GuiGraphics),
+     * поэтому сообщение живёт отдельным виджетом и висит до закрытия экрана, а не гаснет
+     * по таймеру.
+     */
+    private void showNotice(String key, boolean error) {
+        if (this.notice != null) {
+            this.notice.setMessage(Component.translatable(key)
+                .withStyle(error ? ChatFormatting.RED : ChatFormatting.GREEN));
+        }
     }
 
     private Button toggle(String key, BooleanSupplier get, Consumer<Boolean> set) {
@@ -144,8 +200,22 @@ public class ReAnimatedConfigScreen extends Screen {
     }
 
     private Button preset(String key, Supplier<UiPreset> get, Consumer<UiPreset> set) {
+        // Общему пресету нечего наследовать — INHERIT в переборе не участвует.
+        return presetOption(key, UiPreset.MAIN, get, set);
+    }
+
+    /** Пресет меню паузы: те же варианты плюс «как общий» (INHERIT). */
+    private Button pausePreset(String key, Supplier<UiPreset> get, Consumer<UiPreset> set) {
+        return presetOption(key, UiPreset.values(), get, set);
+    }
+
+    private Button presetOption(String key, UiPreset[] values, Supplier<UiPreset> get, Consumer<UiPreset> set) {
         return Button.builder(presetLabel(key, get.get()), b -> {
-            UiPreset nx = UiPreset.values()[(get.get().ordinal() + 1) % UiPreset.values().length];
+            int i = 0;
+            for (int k = 0; k < values.length; k++) {
+                if (values[k] == get.get()) i = k;
+            }
+            UiPreset nx = values[(i + 1) % values.length];
             set.accept(nx);
             ReAnimatedConfig.get().save();
             b.setMessage(presetLabel(key, nx));
