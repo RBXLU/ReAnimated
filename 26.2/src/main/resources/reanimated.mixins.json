@@ -4,9 +4,9 @@
   "client": [
     "ScreenMixin",
     "ClickableWidgetMixin",
-    "DrawContextScissorMixin",
     "HandledScreenMixin",
     "LogoDrawerMixin",
+    "ScissorClampMixin",
     "AdvancementTabMixin",
     "CreativeInventoryScreenMixin",
     "MinecraftClientMixin"

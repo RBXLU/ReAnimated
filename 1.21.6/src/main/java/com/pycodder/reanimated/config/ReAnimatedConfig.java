@@ -48,10 +48,29 @@ public class ReAnimatedConfig {
     public float containerDistance = 30f;
     public EasingType containerEasing = EasingType.OUT_BACK;
 
+    // --- Затемнение фона за экраном: ваниль включает его мгновенно, здесь оно
+    //     нарастает синхронно с выездом панели и гаснет на закрытии. Видно только
+    //     в игре — на главном меню за экраном панорама, а не затемнённый мир. ---
+    public boolean bgFadeEnabled = true;
+
+    // --- Меню паузы (Esc). Свой набор настроек: этот экран открывают чаще всех,
+    //     и та же длительность, что у обычных меню, там ощущается затянутой.
+    //     pausePreset = INHERIT означает «как общий пресет». ---
+    public boolean pauseEnabled = true;
+    public int pauseSpeedTicks = 4;
+    public UiPreset pausePreset = UiPreset.INHERIT;
+    public float pauseDistance = 12f;
+    public EasingType pauseEasing = EasingType.OUT_CUBIC;
+
     // --- Наведение на кнопку: плавное увеличение ---
     public boolean hoverEnabled = true;
     public float hoverScale = 0.07f;           // доля (0.07 = +7%)
     public float hoverSpeed = 14f;             // скорость
+
+    // --- Нажатие на кнопку: кнопка вдавливается и отпружинивает обратно ---
+    public boolean pressEnabled = true;
+    public float pressScale = 0.06f;           // доля (0.06 = -6% в нижней точке)
+    public float pressDuration = 0.18f;        // сек
 
     // --- Подсветка слота в инвентаре, плавно следует за курсором ---
     public boolean slotHighlightEnabled = true;
@@ -93,6 +112,8 @@ public class ReAnimatedConfig {
     // ------------------------------------------------------------------
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    /** Для обмена настройками: то же самое, но одной строкой — удобно вставлять в чат. */
+    private static final Gson SHARE_GSON = new Gson();
     private static ReAnimatedConfig INSTANCE;
 
     public static ReAnimatedConfig get() {
@@ -112,16 +133,7 @@ public class ReAnimatedConfig {
             try (Reader r = Files.newBufferedReader(p)) {
                 ReAnimatedConfig cfg = GSON.fromJson(r, ReAnimatedConfig.class);
                 if (cfg != null) {
-                    // Конфиг мог быть записан версией без профиля, а неизвестные
-                    // значения enum'ов Gson молча превращает в null.
-                    if (cfg.profile == null) cfg.profile = new AnimProfile();
-                    cfg.profile.sanitize();
-                    // Конфиг мог быть записан версией без логотип-каскада.
-                    if (cfg.profileLogo == null) cfg.profileLogo = LogoLetters.defaultProfile();
-                    cfg.profileLogo.sanitize();
-                    if (cfg.logoStyle == null) cfg.logoStyle = LogoStyle.GROW;
-                    if (cfg.profileTabs == null) cfg.profileTabs = defaultTabsProfile();
-                    cfg.profileTabs.sanitize();
+                    cfg.sanitize();
                     return cfg;
                 }
             } catch (Exception e) {
@@ -143,5 +155,68 @@ public class ReAnimatedConfig {
         } catch (IOException e) {
             ReAnimatedClient.LOGGER.warn("[ReAnimated] Failed to save config", e);
         }
+    }
+
+    /**
+     * Подставляет значения по умолчанию вместо отсутствующих. Нужно и при чтении файла
+     * (конфиг мог быть записан старой версией мода), и при импорте чужих настроек:
+     * незнакомое значение enum'а Gson молча превращает в null, а отсутствующий объект
+     * так и остаётся null — без этого первый же кадр падал бы с NPE.
+     */
+    private void sanitize() {
+        if (profile == null) profile = new AnimProfile();
+        profile.sanitize();
+        if (profileLogo == null) profileLogo = LogoLetters.defaultProfile();
+        profileLogo.sanitize();
+        if (profileTabs == null) profileTabs = defaultTabsProfile();
+        profileTabs.sanitize();
+        if (logoStyle == null) logoStyle = LogoStyle.GROW;
+        if (uiPreset == null) uiPreset = UiPreset.DEFAULT;
+        if (screenOpenEasing == null) screenOpenEasing = EasingType.OUT_CUBIC;
+        if (containerEasing == null) containerEasing = EasingType.OUT_BACK;
+        if (logoEasing == null) logoEasing = EasingType.OUT_BACK;
+        // Конфиг мог быть записан версией без настроек меню паузы.
+        if (pausePreset == null) pausePreset = UiPreset.INHERIT;
+        if (pauseEasing == null) pauseEasing = EasingType.OUT_CUBIC;
+        // Общий пресет ссылаться сам на себя не может — так настройки открывались бы мгновенно.
+        if (uiPreset == UiPreset.INHERIT) uiPreset = UiPreset.DEFAULT;
+    }
+
+    // --- Обмен настройками ---
+
+    /** Все настройки одной строкой — для кнопки «Копировать настройки». */
+    public String toShareString() {
+        return SHARE_GSON.toJson(this);
+    }
+
+    /**
+     * Применяет настройки из строки, скопированной у другого игрока (или прямо из
+     * {@code reanimated.json} — формат тот же). Значения переносятся в уже живущий
+     * экземпляр конфига, а не подменяют его: открытые экраны держат ссылку на него.
+     *
+     * @return true, если строка разобрана и применена
+     */
+    public static boolean applyShareString(String text) {
+        if (text == null || text.isBlank()) return false;
+        ReAnimatedConfig parsed;
+        try {
+            parsed = GSON.fromJson(text.trim(), ReAnimatedConfig.class);
+        } catch (Exception e) {
+            return false; // не JSON или JSON не той формы
+        }
+        if (parsed == null) return false;
+        parsed.sanitize();
+
+        ReAnimatedConfig target = get();
+        for (java.lang.reflect.Field f : ReAnimatedConfig.class.getDeclaredFields()) {
+            if (java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
+            try {
+                f.set(target, f.get(parsed));
+            } catch (IllegalAccessException ignored) {
+                // поле недоступно — оставляем текущее значение
+            }
+        }
+        target.save();
+        return true;
     }
 }

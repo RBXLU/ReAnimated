@@ -67,7 +67,7 @@ public class CreativeInventoryScreenMixin {
         // Флашим уже накопленную сетку предметов ДО обрезки, иначе она попала бы под scissor.
         context.draw();
         // Обрезка «за плашкой»: показываем вкладку только вне прямоугольника панели.
-        // enableScissor мапится матрицей (DrawContextScissorMixin) → ляжет по видимой панели.
+        // enableScissor ваниль (1.21.4+) сама мапит текущей матрицей → ляжет по видимой панели.
         if (top) {
             context.enableScissor(0, 0, sw, panel.reanimated$panelTop());
         } else {

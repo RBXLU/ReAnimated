@@ -6,7 +6,6 @@
     "ScreenMixin",
     "ClickableWidgetMixin",
     "PressableWidgetMixin",
-    "DrawContextScissorMixin",
     "HandledScreenMixin",
     "LogoDrawerMixin",
     "AdvancementTabMixin",

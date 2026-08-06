@@ -45,6 +45,7 @@ public abstract class ScreenMixin {
     @Unique private long reanimated$openTime = 0L;
     @Unique private boolean reanimated$fwdPushed = false;
     @Unique private boolean reanimated$bgPushed = false;
+    @Unique private int reanimated$pauseFlag = -1;
 
     @Inject(method = "init(Lnet/minecraft/client/MinecraftClient;II)V", at = @At("TAIL"))
     private void reanimated$onInit(MinecraftClient client, int width, int height, CallbackInfo ci) {
@@ -87,9 +88,19 @@ public abstract class ScreenMixin {
         return ((Object) this) instanceof HandledScreen;
     }
 
+    /** Меню паузы у экрана не меняется — определяем один раз, а не каждый кадр. */
+    @Unique
+    private boolean reanimated$isPause() {
+        if (reanimated$pauseFlag < 0) {
+            reanimated$pauseFlag = Anim.isPauseScreen(this) ? 1 : 0;
+        }
+        return reanimated$pauseFlag == 1;
+    }
+
     @Inject(method = "renderWithTooltip", at = @At("HEAD"))
     private void reanimated$wrapHead(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         Anim.currentOpenTime = reanimated$openTime;
+        Anim.currentIsPause = reanimated$isPause();
         boolean container = reanimated$isContainer();
         reanimated$fwdPushed = Anim.transformActive(container) && Anim.shouldAnimate(this);
         if (reanimated$fwdPushed) {
@@ -136,5 +147,35 @@ public abstract class ScreenMixin {
         if (reanimated$bgPushed) {
             context.getMatrices().pop();
         }
+    }
+
+    /** Цвета ванильного затемнения: градиент сверху вниз, оба — чёрный с разной прозрачностью. */
+    @Unique private static final int REANIMATED$DIM_TOP = 0xC0101010;
+    @Unique private static final int REANIMATED$DIM_BOTTOM = 0xD0101010;
+
+    /**
+     * Плавное появление затемнения за экраном. Ваниль включает его мгновенно — панель
+     * красиво выезжает на фоне, который «щёлкнул». Здесь тот же градиент рисуется с
+     * прозрачностью по кривой открытия, а на закрытии гаснет обратно.
+     *
+     * Пока анимация не идёт, ванильный метод отрабатывает как обычно — мод не трогает
+     * ни один кадр статичного экрана и не мешает модам, меняющим затемнение.
+     */
+    @Inject(method = "renderInGameBackground", at = @At("HEAD"), cancellable = true)
+    private void reanimated$dimFade(DrawContext context, CallbackInfo ci) {
+        if (!Anim.shouldAnimate(this)) return;
+        float k = Anim.backgroundFade(reanimated$isContainer());
+        if (k >= 1f) return;
+
+        ci.cancel();
+        if (k <= 0.004f) return; // ещё неотличимо от прозрачного — не рисуем вовсе
+        context.fillGradient(0, 0, this.width, this.height,
+            reanimated$dim(REANIMATED$DIM_TOP, k), reanimated$dim(REANIMATED$DIM_BOTTOM, k));
+    }
+
+    @Unique
+    private static int reanimated$dim(int argb, float k) {
+        int a = Math.round(((argb >>> 24) & 0xFF) * k);
+        return (a << 24) | (argb & 0x00FFFFFF);
     }
 }
