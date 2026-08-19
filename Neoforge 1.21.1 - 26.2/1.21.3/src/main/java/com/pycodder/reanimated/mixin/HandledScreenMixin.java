@@ -76,6 +76,7 @@ public abstract class HandledScreenMixin implements PanelBounds {
     private void reanimated$blurPop(GuiGraphics graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if (reanimated$blurPushed) {
             graphics.pose().popPose();
+            com.pycodder.reanimated.anim.OwnTransform.pop();
         }
     }
 

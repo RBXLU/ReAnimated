@@ -72,7 +72,7 @@ public abstract class AdvancementTabMixin {
         graphics.enableScissor(0, 0, sw, winY);
         PoseStack m = graphics.pose();
         m.pushPose();
-        m.translate(0f, dy, 0f);
+        com.pycodder.reanimated.anim.UiTransform.translate(m, 0f, dy);
         reanimated$pushed = true;
     }
 
@@ -81,6 +81,7 @@ public abstract class AdvancementTabMixin {
         if (reanimated$pushed) {
             graphics.flush(); // отрисовать вкладку (обрезанную) под scissor
             graphics.pose().popPose();
+            com.pycodder.reanimated.anim.OwnTransform.pop();
             graphics.disableScissor();
             reanimated$pushed = false;
         }

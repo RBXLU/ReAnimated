@@ -6,6 +6,7 @@
   "client": [
     "ScreenMixin",
     "ClickableWidgetMixin",
+    "AbstractSelectionListMixin",
     "PressableWidgetMixin",
     "DrawContextScissorMixin",
     "HandledScreenMixin",

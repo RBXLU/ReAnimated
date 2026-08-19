@@ -2,6 +2,7 @@ package com.pycodder.reanimated.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.pycodder.reanimated.anim.Anim;
+import com.pycodder.reanimated.anim.OwnTransform;
 import com.pycodder.reanimated.anim.CascadeTarget;
 import com.pycodder.reanimated.anim.UiTransform;
 import net.minecraft.client.Minecraft;
@@ -42,7 +43,21 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * Для контейнеров renderBackground переопределён в AbstractContainerScreen —
  * там свой обработчик ({@code HandledScreenMixin}).
  */
-@Mixin(Screen.class)
+/*
+ * priority = 1500 (по умолчанию 1000) — сознательно ВЫШЕ обычного.
+ *
+ * Оборачиваем отрисовку экрана: push на HEAD, pop на RETURN. Порядок инжекторов
+ * разных модов в одной точке задаётся порядком применения миксинов, а он идёт по
+ * возрастанию приоритета: чей приоритет выше, тот на HEAD выполняется ПЕРВЫМ, а на
+ * RETURN — ПОСЛЕДНИМ. То есть наша обёртка становится самой внешней, и всё, что
+ * другие моды дорисовывают к экрану из своих хуков, попадает внутрь трансформации
+ * и едет вместе с экраном.
+ *
+ * Без этого оверлеи вроде списка предметов EMI/JEI/REI (их рисуют из хука на RETURN
+ * того же метода) оставались снаружи: наш pop успевал раньше, панель стояла на месте,
+ * пока экран выезжал.
+ */
+@Mixin(value = Screen.class, priority = 1500)
 public abstract class ScreenMixin {
 
     @Shadow public int width;
@@ -51,12 +66,22 @@ public abstract class ScreenMixin {
     @Unique private long reanimated$openTime = 0L;
     @Unique private boolean reanimated$fwdPushed = false;
     @Unique private boolean reanimated$bgPushed = false;
+    @Unique private int reanimated$pauseFlag = -1;
     @Unique private int reanimated$lastW = -1;
     @Unique private int reanimated$lastH = -1;
 
     @Unique
     private boolean reanimated$isContainer() {
         return ((Object) this) instanceof AbstractContainerScreen;
+    }
+
+    /** Меню паузы у экрана не меняется — определяем один раз, а не каждый кадр. */
+    @Unique
+    private boolean reanimated$isPause() {
+        if (reanimated$pauseFlag < 0) {
+            reanimated$pauseFlag = Anim.isPauseScreen(this) ? 1 : 0;
+        }
+        return reanimated$pauseFlag == 1;
     }
 
     /**
@@ -100,7 +125,10 @@ public abstract class ScreenMixin {
             reanimated$lastH = this.height;
             reanimated$assignCascade();
         }
+        // Начало кадра экрана: сбрасываем учёт своих трансформаций (см. OwnTransform).
+        OwnTransform.reset();
         Anim.currentOpenTime = reanimated$openTime;
+        Anim.currentIsPause = reanimated$isPause();
         boolean container = reanimated$isContainer();
         reanimated$fwdPushed = Anim.transformActive(container) && Anim.shouldAnimate(this);
         if (reanimated$fwdPushed) {
@@ -114,6 +142,7 @@ public abstract class ScreenMixin {
     private void reanimated$wrapTail(GuiGraphics graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if (reanimated$fwdPushed) {
             graphics.pose().popPose();
+            OwnTransform.pop();
         }
         reanimated$maybeFinishClose();
     }
@@ -146,6 +175,37 @@ public abstract class ScreenMixin {
     private void reanimated$bgTail(GuiGraphics graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if (reanimated$bgPushed) {
             graphics.pose().popPose();
+            OwnTransform.pop();
         }
+    }
+
+    /** Цвета ванильного затемнения: градиент сверху вниз, оба — чёрный с разной прозрачностью. */
+    @Unique private static final int REANIMATED$DIM_TOP = 0xC0101010;
+    @Unique private static final int REANIMATED$DIM_BOTTOM = 0xD0101010;
+
+    /**
+     * Плавное появление затемнения за экраном. Ваниль включает его мгновенно — панель
+     * красиво выезжает на фоне, который «щёлкнул». Здесь тот же градиент рисуется с
+     * прозрачностью по кривой открытия, а на закрытии гаснет обратно.
+     *
+     * Пока анимация не идёт, ванильный метод отрабатывает как обычно — мод не трогает
+     * ни один кадр статичного экрана и не мешает модам, меняющим затемнение.
+     */
+    @Inject(method = "renderTransparentBackground", at = @At("HEAD"), cancellable = true)
+    private void reanimated$dimFade(GuiGraphics graphics, CallbackInfo ci) {
+        if (!Anim.shouldAnimate(this)) return;
+        float k = Anim.backgroundFade(reanimated$isContainer());
+        if (k >= 1f) return;
+
+        ci.cancel();
+        if (k <= 0.004f) return; // ещё неотличимо от прозрачного — не рисуем вовсе
+        graphics.fillGradient(0, 0, this.width, this.height,
+            reanimated$dim(REANIMATED$DIM_TOP, k), reanimated$dim(REANIMATED$DIM_BOTTOM, k));
+    }
+
+    @Unique
+    private static int reanimated$dim(int argb, float k) {
+        int a = Math.round(((argb >>> 24) & 0xFF) * k);
+        return (a << 24) | (argb & 0x00FFFFFF);
     }
 }

@@ -29,6 +29,14 @@ public final class Anim {
     public static int cascadeCount = 1;
 
     /**
+     * Является ли текущий отрисовываемый экран меню паузы. Выставляется вместе с
+     * {@link #currentOpenTime} и переключает расчёты на отдельный набор настроек
+     * ({@code pause*}): меню паузы открывают чаще любого другого экрана, и общая
+     * длительность там ощущается затянутой.
+     */
+    public static boolean currentIsPause = false;
+
+    /**
      * Время (millis) начала анимации закрытия экрана. 0 — экран не закрывается.
      * Пока это время установлено, {@code MinecraftClientMixin} отменяет реальный
      * {@code setScreen(null)} и держит старый экран на отрисовке — {@link #slideY}
@@ -73,8 +81,17 @@ public final class Anim {
     /** Длительность анимации ЭКРАНА (пресет), мс. 0 — пресет неактивен. */
     private static float presetDurationMs(boolean container) {
         ReAnimatedConfig c = ReAnimatedConfig.get();
-        boolean active = enabled(c, container) && c.uiPreset != UiPreset.NONE;
-        return active ? duration(c, container) * 1000f : 0f;
+        return presetLayerActive(container) ? duration(c, container) * 1000f : 0f;
+    }
+
+    /**
+     * Играет ли для текущего экрана слой ЭКРАНА (пресет). Отдельным методом, потому что
+     * это же условие решает, откладывать ли настоящее закрытие ({@code MinecraftClientMixin}) —
+     * иначе набор «что включено» пришлось бы держать в двух местах.
+     */
+    public static boolean presetLayerActive(boolean container) {
+        ReAnimatedConfig c = ReAnimatedConfig.get();
+        return enabled(c, container) && preset(c, container) != UiPreset.NONE;
     }
 
     /** Длительность каскада КНОПОК (профиль), мс. 0 — профиль выключен. */
@@ -139,7 +156,36 @@ public final class Anim {
 
     private static float duration(ReAnimatedConfig c, boolean container) {
         // Единая скорость для всего UI, задаётся в тиках (20 тиков = 1 сек).
-        return Math.max(1, c.animationSpeedTicks) / 20f;
+        // Исключение — меню паузы: у него своя.
+        int ticks = isPause(container) ? c.pauseSpeedTicks : c.animationSpeedTicks;
+        return Math.max(1, ticks) / 20f;
+    }
+
+    /** Считать ли текущий экран меню паузы. Контейнером меню паузы не бывает. */
+    private static boolean isPause(boolean container) {
+        return currentIsPause && !container;
+    }
+
+    /** Пресет для текущего экрана: у меню паузы может быть свой, иначе общий. */
+    private static UiPreset preset(ReAnimatedConfig c, boolean container) {
+        if (isPause(container) && c.pausePreset != null && c.pausePreset != UiPreset.INHERIT) {
+            return c.pausePreset;
+        }
+        return c.uiPreset == null || c.uiPreset == UiPreset.INHERIT ? UiPreset.DEFAULT : c.uiPreset;
+    }
+
+    /**
+     * Меню паузы ли это. Экран определяем по имени класса, а не по типу: в yarn это
+     * {@code GameMenuScreen}, в Mojang-маппингах (26.x) — {@code PauseScreen}, и так
+     * один и тот же {@code Anim} работает в обеих средах.
+     */
+    public static boolean isPauseScreen(Object screen) {
+        if (screen == null) return false;
+        for (Class<?> k = screen.getClass(); k != null && k != Object.class; k = k.getSuperclass()) {
+            String n = k.getSimpleName();
+            if ("GameMenuScreen".equals(n) || "PauseScreen".equals(n)) return true;
+        }
+        return false;
     }
 
     /**
@@ -168,16 +214,27 @@ public final class Anim {
     }
 
     private static boolean enabled(ReAnimatedConfig c, boolean container) {
-        return container ? c.containerEnabled : c.screenOpenEnabled;
+        if (container) return c.containerEnabled;
+        return isPause(container) ? c.pauseEnabled : c.screenOpenEnabled;
     }
 
     /** Текущий вертикальный сдвиг (px). Ненулевой только для пресета DEFAULT. */
     public static float slideY(boolean container) {
         ReAnimatedConfig c = ReAnimatedConfig.get();
-        if (!enabled(c, container) || c.uiPreset != UiPreset.DEFAULT) return 0f;
+        if (!enabled(c, container) || preset(c, container) != UiPreset.DEFAULT) return 0f;
         float p = isClosing() ? virtualOpenProgress(container) : progress(container);
-        EasingType easing = container ? c.containerEasing : c.screenOpenEasing;
-        float distance = container ? c.containerDistance : c.screenOpenDistance;
+        EasingType easing;
+        float distance;
+        if (container) {
+            easing = c.containerEasing;
+            distance = c.containerDistance;
+        } else if (isPause(container)) {
+            easing = c.pauseEasing;
+            distance = c.pauseDistance;
+        } else {
+            easing = c.screenOpenEasing;
+            distance = c.screenOpenDistance;
+        }
         return (1f - easing.apply(p)) * distance;
     }
 
@@ -192,12 +249,36 @@ public final class Anim {
         return slideY(container) != 0f || scale(container) != 1f;
     }
 
+    /**
+     * Насколько «набрано» затемнение фона (0..1). 1 — ровно ванильное, и тогда миксин
+     * не вмешивается вовсе.
+     *
+     * В гейт отложенного закрытия ({@code MinecraftClientMixin}) этот слой намеренно НЕ
+     * входит: затемнение видно только когда за экраном мир, а гейт про это не знает —
+     * иначе на главном меню закрытие тормозило бы ради невидимой анимации. Пока играет
+     * пресет или каскад кнопок, затухание идёт с ними в один такт (та же длительность).
+     */
+    public static float backgroundFade(boolean container) {
+        ReAnimatedConfig c = ReAnimatedConfig.get();
+        if (!c.bgFadeEnabled) return 1f;
+        float p;
+        if (isClosing()) {
+            float d = Math.max(1f, duration(c, container) * 1000f);
+            float norm = Easing.clamp01((System.currentTimeMillis() - closeStartTime) / d);
+            p = closeStartProgress * (1f - norm);
+        } else {
+            p = progress(container);
+        }
+        return Easing.outCubic(p);
+    }
+
     /** Текущий масштаб относительно центра. 1.0 для DEFAULT/NONE. */
     public static float scale(boolean container) {
         ReAnimatedConfig c = ReAnimatedConfig.get();
-        if (!enabled(c, container) || !c.uiPreset.isScale()) return 1f;
+        UiPreset preset = preset(c, container);
+        if (!enabled(c, container) || !preset.isScale()) return 1f;
         float p = isClosing() ? virtualOpenProgress(container) : progress(container);
-        if (c.uiPreset == UiPreset.FROM_BACKGROUND) {
+        if (preset == UiPreset.FROM_BACKGROUND) {
             return Easing.lerp(FROM_BACKGROUND_SCALE, 1f, Easing.outBack(p));
         }
         // FROM_FOREGROUND
