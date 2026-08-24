@@ -16,25 +16,13 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Анимация логотипа "Minecraft" на главном экране (эпоха 1.21.6–1.21.11 — Matrix3x2fStack).
- *
- * Два стиля (config.logoStyle):
- *  - GROW    — родная анимация мода: логотип целиком "вырастает" с отскоком;
- *  - LETTERS — побуквенный каскад: девять букв влетают/проявляются по очереди
- *              (идея и текстуры букв — из EaseGUI, LGPLv3). В этом режиме ванильная
- *              отрисовка логотипа отменяется, буквы и edition-текст рисуем сами.
- *
- * В этой эпохе нет {@code setShaderColor}: прозрачность передаётся ARGB-цветом в blit.
- */
+/** "Minecraft" logo animation on the title screen (1.21.6–1.21.11 era: Matrix3x2fStack). */
 @Mixin(LogoDrawer.class)
 public class LogoDrawerMixin {
-
     @Unique private boolean reanimated$pushed = false;
 
     @Unique private static Identifier[] reanimated$letters;
 
-    /** Лениво собирает Identifier'ы букв (без статического инициализатора — безопаснее для миксина). */
     @Unique
     private static Identifier[] reanimated$letters() {
         Identifier[] a = reanimated$letters;
@@ -48,7 +36,6 @@ public class LogoDrawerMixin {
         return a;
     }
 
-    /** Белый цвет с заданной прозрачностью в формате ARGB. */
     @Unique
     private static int reanimated$argb(float alpha) {
         int a = Math.round(Math.max(0f, Math.min(1f, alpha)) * 255f);
@@ -69,7 +56,6 @@ public class LogoDrawerMixin {
             return;
         }
 
-        // --- Стиль GROW ---
         float elapsed = Anim.elapsed(System.currentTimeMillis());
         if (elapsed == Float.MAX_VALUE) {
             return;
@@ -125,7 +111,6 @@ public class LogoDrawerMixin {
                 matrices.popMatrix();
             }
         }
-        // edition-текст ("Java Edition")
         context.drawTexture(RenderPipelines.GUI_TEXTURED, LogoDrawer.EDITION_TEXTURE,
                 screenWidth / 2 - 64, boxY + LogoLetters.LOGO_HEIGHT - 7, 0f, 0f,
                 128, 14, 128, 16, reanimated$argb(alpha));

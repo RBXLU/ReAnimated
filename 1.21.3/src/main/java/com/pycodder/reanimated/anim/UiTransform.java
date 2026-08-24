@@ -2,17 +2,7 @@ package com.pycodder.reanimated.anim;
 
 import net.minecraft.client.util.math.MatrixStack;
 
-/**
- * Трансформация ЭКРАНА (UI) целиком — задаётся ПРЕСЕТОМ ({@link UiPreset}).
- * Это «анимация UI»: экран/панель контейнера выезжает/масштабируется.
- *
- * Покнопочная «анимация кнопок» (профиль/Студия) — отдельный слой, он кладётся
- * ПОВЕРХ этой трансформации в {@code ClickableWidgetMixin} и здесь не участвует.
- * Так пресет (UI) и профиль (кнопки) работают вместе, а не исключают друг друга.
- *
- * {@link #forward} едет вместе с содержимым экрана, {@link #inverse} возвращает
- * на место фон/блюр.
- */
+/** Transform of the whole SCREEN (UI), driven by the PRESET ({@link UiPreset}). */
 public final class UiTransform {
     private UiTransform() {}
 
@@ -25,7 +15,6 @@ public final class UiTransform {
         }
     }
 
-    /** Обратная трансформация — строго в обратном порядке к {@link #forward}. */
     public static void inverse(MatrixStack m, float width, float height, boolean container) {
         float sy = Anim.slideY(container);
         float sc = Anim.scale(container);

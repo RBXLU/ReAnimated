@@ -19,23 +19,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Фреймы-списки ({@code ContainerWidget}) исключены отсюда полностью — они не едут,
- * не каскадируются и не увеличиваются под курсором (см. {@link #reanimated$freezeFrame}).
- * Для остальных виджетов здесь две независимые вещи поверх обычной отрисовки:
- *
- * 1. Покнопочный «вход» — анимация КНОПОК (профиль/Студия). Работает ПОВЕРХ
- *    анимации экрана (пресета): каждая кнопка сама смещается/масштабируется/гаснет
- *    вокруг своего пивота по своему шагу каскада. Пресет двигает экран целиком,
- *    этот слой — кнопки; они складываются, а не исключают друг друга.
- *
- * 2. Плавное увеличение при наведении курсора (работает в любом режиме).
- *
- * Версия для 1.21.6+: GUI рисуется 2D-матрицей {@link Matrix3x2fStack}.
- */
+/** List frames ({@code ContainerWidget}) are excluded here entirely: they neither move, nor cascade, nor scale on hover. */
 @Mixin(ClickableWidget.class)
 public abstract class ClickableWidgetMixin implements CascadeTarget {
-
     @Shadow public abstract int getX();
     @Shadow public abstract int getY();
     @Shadow public abstract int getWidth();
@@ -72,11 +58,6 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
         return this.alpha;
     }
 
-    /**
-     * Порог видимости. Ниже него ваниль (TextRenderer.tweakTransparency) считает цвет текста
-     * "почти прозрачным" и делает надпись ПОЛНОСТЬЮ непрозрачной: рамка уже невидима, а текст
-     * вспыхивает сплошным. Поэтому настолько погасший виджет не рисуем вовсе.
-     */
     @Unique private static final float REANIMATED$MIN_ALPHA = 4f / 255f;
 
     @Unique
@@ -106,18 +87,11 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
         reanimated$applyHover(context);
     }
 
-    /**
-     * Фрейм-список (сервера, миры, ресурспаки, список опций) мод не анимирует вообще.
-     * Двигать его нечестно: содержимое едет вместе с экраном, а обрезка (scissor) и
-     * прокрутка внутри списка считаются в экранных координатах и остаются на месте —
-     * фрейм разъезжается сам с собой. Экран уже сдвинут ScreenMixin'ом, поэтому здесь
-     * снимаем сдвиг обратно — ровно с этого виджета.
-     */
     @Unique
     private void reanimated$freezeFrame(DrawContext context) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (!Anim.shouldAnimate(client.currentScreen)) {
-            return; // экран и так не анимируется — снимать нечего
+            return;
         }
         boolean container = client.currentScreen instanceof HandledScreen;
         if (!Anim.transformActive(container)) {
@@ -145,8 +119,6 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
     @Unique
     private void reanimated$applyProfile(DrawContext context) {
         AnimProfile p = ReAnimatedConfig.get().profile;
-        // Ранга нет у виджетов вне анимируемого экрана — например, у превью
-        // в редакторе профиля: оно рисует и анимирует себя само.
         if (!p.enabled || reanimated$rank < 0) {
             return;
         }
@@ -161,12 +133,9 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
         }
 
         if (p.identityAt(own)) {
-            return; // кнопка уже на месте — матрицу не трогаем
+            return;
         }
 
-        // Полный покнопочный «вход» ПОВЕРХ трансформации экрана (пресета): кнопка
-        // сама смещается/масштабируется вокруг своего пивота. Так пресет (экран) и
-        // профиль/Студия (кнопки) складываются, а не исключают друг друга.
         Matrix3x2fStack m = context.getMatrices();
         m.pushMatrix();
         reanimated$pushed++;
@@ -192,7 +161,7 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
         reanimated$hover = Easing.approach(reanimated$hover, target, dt, c.hoverSpeed);
 
         if (reanimated$hover < 0.001f) {
-            return; // не наведено — без накладных расходов
+            return;
         }
 
         float scale = 1f + c.hoverScale * reanimated$hover;

@@ -2,17 +2,7 @@ package com.pycodder.reanimated.anim;
 
 import org.joml.Matrix3x2fStack;
 
-/**
- * Трансформация ЭКРАНА (UI) целиком — задаётся ПРЕСЕТОМ ({@link UiPreset}).
- * Это «анимация UI»: экран/панель контейнера выезжает/масштабируется.
- *
- * Покнопочная «анимация кнопок» (профиль/Студия) — отдельный слой, он кладётся
- * ПОВЕРХ этой трансформации в {@code ClickableWidgetMixin} и здесь не участвует.
- * Так пресет (UI) и профиль (кнопки) работают вместе, а не исключают друг друга.
- *
- * Версия для 1.21.6+: GUI рисуется 2D-матрицей {@link Matrix3x2fStack}
- * (translate/scale в два аргумента, pushMatrix/popMatrix).
- */
+/** Transform of the whole SCREEN (UI), driven by the PRESET ({@link UiPreset}). */
 public final class UiTransform {
     private UiTransform() {}
 
@@ -25,7 +15,6 @@ public final class UiTransform {
         }
     }
 
-    /** Обратная трансформация — строго в обратном порядке к {@link #forward}. */
     public static void inverse(Matrix3x2fStack m, float width, float height, boolean container) {
         float sy = Anim.slideY(container);
         float sc = Anim.scale(container);

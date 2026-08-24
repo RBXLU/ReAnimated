@@ -1,6 +1,6 @@
 package com.pycodder.reanimated.anim;
 
-/** Набор функций сглаживания (easing) для анимаций интерфейса. */
+/** Easing functions used by the UI animations. */
 public final class Easing {
     private Easing() {}
 
@@ -10,20 +10,17 @@ public final class Easing {
         return t;
     }
 
-    /** Плавное замедление к концу. Хорошо для появления элементов. */
     public static float outCubic(float t) {
         t = clamp01(t);
         float f = 1f - t;
         return 1f - f * f * f;
     }
 
-    /** Сильное замедление к концу. */
     public static float outExpo(float t) {
         t = clamp01(t);
         return t >= 1f ? 1f : 1f - (float) Math.pow(2.0, -10.0 * t);
     }
 
-    /** Лёгкий "отскок" в конце — приятно для логотипа и контейнеров. */
     public static float outBack(float t) {
         t = clamp01(t);
         final float c1 = 1.70158f;
@@ -32,23 +29,15 @@ public final class Easing {
         return 1f + c3 * f * f * f + c1 * f * f;
     }
 
-    /**
-     * Кривая нажатия кнопки: 0 -> 1 -> 0 за один проход {@code t} от 0 до 1.
-     * Возвращает «глубину вдавливания» в долях: кнопка быстро уходит вниз
-     * (первая четверть таймлайна) и заметно дольше возвращается с лёгким
-     * перелётом вверх, отчего нажатие ощущается упругим, а не «дрожащим».
-     */
     public static float press(float t) {
         t = clamp01(t);
         final float down = 0.25f;
         if (t < down) {
             return outCubic(t / down);
         }
-        // Возврат: outBack, отражённый вниз — перелёт даёт кнопке «отпружинить».
         return 1f - outBack((t - down) / (1f - down));
     }
 
-    /** Кадронезависимое экспоненциальное приближение current -> target. */
     public static float approach(float current, float target, float dtSeconds, float speed) {
         float rate = 1f - (float) Math.exp(-speed * dtSeconds);
         if (rate < 0f) rate = 0f;

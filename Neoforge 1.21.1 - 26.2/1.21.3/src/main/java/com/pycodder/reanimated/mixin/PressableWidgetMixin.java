@@ -9,21 +9,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Затемнение ТЕКСТА кнопки вместе с рамкой (NeoForge / Mojmap, эпоха 1.21.2–1.21.5).
- *
- * Рамку ваниль рисует с явным ARGB-цветом (alpha уже внутри), а ТЕКСТ — цветом,
- * у которого alpha в старших битах. В этой среде альфа текста фактически не
- * применяется: рамка гаснет, текст остаётся непрозрачным («текст отстаёт»).
- *
- * Здесь на время отрисовки текста выставляем шейдер-цвет в alpha виджета —
- * текст гаснет тем же путём, что и рамка, — и сразу возвращаем обратно.
- * В 1.21.2+ обёртки {@code GuiGraphics.setColor} нет, поэтому зовём
- * {@link RenderSystem} напрямую. При alpha=1 ничего не трогаем вовсе.
- */
+/** Dims the button TEXT along with its frame (NeoForge / Mojmap, 1.21.2–1.21.5 era). */
 @Mixin(AbstractButton.class)
 public abstract class PressableWidgetMixin {
-
     @Inject(method = "renderWidget", at = @At(value = "INVOKE",
         target = "Lnet/minecraft/client/gui/components/AbstractButton;renderString("
                + "Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/client/gui/Font;I)V"))

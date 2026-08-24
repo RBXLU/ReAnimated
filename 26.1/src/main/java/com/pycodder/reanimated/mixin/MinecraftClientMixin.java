@@ -14,15 +14,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Отложенное закрытие экрана: вместо мгновенного {@code setScreen(null)} экран
- * ненадолго остаётся текущим и доигрывает анимацию открытия в обратном порядке
- * ({@link Anim#beginClose}), а по её завершении {@code ScreenMixin} сам вызывает
- * настоящий {@code setScreen(null)} (пропуская этот миксин через {@link Anim#bypassClose}).
- */
+/** Deferred screen close: instead of an immediate {@code setScreen(null)} the screen stays current briefly and plays the open animation in reverse. */
 @Mixin(Minecraft.class)
 public abstract class MinecraftClientMixin {
-
     @Shadow public Screen screen;
 
     @Unique private String reanimated$closeName = null;
@@ -33,15 +27,10 @@ public abstract class MinecraftClientMixin {
         if (Anim.bypassClose) return;
 
         if (screen != null) {
-            // Открывается другой экран — реверс старого больше не актуален.
             if (Anim.isClosing()) Anim.finishClose();
             return;
         }
 
-        // Закрытие уже проигрывается. Контейнерное закрытие (инвентарь/печь/верстак)
-        // шлёт setScreen(null) ДВАЖДЫ: сначала ClientPlayerEntity.closeScreen, затем
-        // Screen.close. Глотаем повторные вызовы, иначе второй закрыл бы экран мгновенно,
-        // без анимации. Настоящее закрытие выполнит ScreenMixin через bypassClose.
         if (Anim.isClosing()) {
             ci.cancel();
             return;
@@ -64,20 +53,6 @@ public abstract class MinecraftClientMixin {
         ci.cancel();
     }
 
-    /**
-     * Можно ли держать этот экран открытым ради анимации закрытия.
-     *
-     * Нельзя, если экран переопределил close() сам: его код успевает отработать
-     * ДО нашей отмены setScreen(null) — например, освободить кадровый буфер и
-     * обнулить ссылку, — а мы после этого продолжаем рисовать экран ещё доли
-     * секунды и получаем краш на первом же кадре. Так падал экран схемы из мода
-     * simulated (NPE в DiagramScreen.renderFBO), и так упадёт любой экран,
-     * убирающий за собой в close().
-     *
-     * Экранам с ванильным close() это не грозит: он ничего не разрушает, а
-     * removed() (где ванильные экраны прибираются) вызывается из setScreen —
-     * то есть только когда мы наконец пропустим настоящее закрытие.
-     */
     @Unique
     private boolean reanimated$safeToDefer(Screen screen) {
         String name = reanimated$closeMethodName();
@@ -86,15 +61,10 @@ public abstract class MinecraftClientMixin {
             Class<?> owner = screen.getClass().getMethod(name).getDeclaringClass();
             return owner.getName().startsWith("net.minecraft.");
         } catch (Throwable t) {
-            return false; // не смогли выяснить — не рискуем, закрываем мгновенно
+            return false;
         }
     }
 
-    /**
-     * Имя Screen.close() в текущей среде: yarn в разработке, intermediary в обычной
-     * сборке, mojmap под Sinytra Connector. Рефлексия по строке не ремапится, поэтому
-     * берём то имя, которое реально есть у класса. Определяется один раз.
-     */
     @Unique
     private String reanimated$closeMethodName() {
         if (!reanimated$closeNameResolved) {
@@ -105,7 +75,6 @@ public abstract class MinecraftClientMixin {
                     reanimated$closeName = candidate;
                     break;
                 } catch (NoSuchMethodException ignored) {
-                    // не эти маппинги — пробуем следующее имя
                 }
             }
             if (reanimated$closeName == null) {

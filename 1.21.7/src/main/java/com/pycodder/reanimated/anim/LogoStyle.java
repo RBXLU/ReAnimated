@@ -1,10 +1,8 @@
 package com.pycodder.reanimated.anim;
 
-/** Стиль анимации логотипа "Minecraft" на главном экране. */
+/** Animation style of the "Minecraft" logo on the title screen. */
 public enum LogoStyle {
-    /** Родная анимация мода: логотип целиком "вырастает" с отскоком. */
     GROW("Grow"),
-    /** Побуквенный каскад: каждая буква MINECRAFT влетает/проявляется по очереди. */
     LETTERS("Letters cascade");
 
     public final String display;

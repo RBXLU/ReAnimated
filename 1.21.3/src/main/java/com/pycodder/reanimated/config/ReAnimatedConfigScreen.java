@@ -16,9 +16,8 @@ import net.minecraft.util.Util;
 import java.net.URI;
 import java.util.function.Consumer;
 
-/** Экран настроек мода: слайдеры/переключатели для каждой анимации + ссылка на автора. */
+/** Mod settings screen: sliders and toggles for each animation, plus a link to the author. */
 public class ReAnimatedConfigScreen extends GameOptionsScreen {
-
     private static final String AUTHOR_URL = "https://modrinth.com/user/pycodder";
     private static final String TESTED_URL = "https://github.com/RBXLU/ReAnimated/blob/main/testedmods.txt";
     private static final Text CREDIT = Text.literal("mod by @pycodder");
@@ -33,7 +32,6 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
     @Override
     protected void init() {
         super.init();
-        // Настоящая кнопка (а не кликабельный текст) — гарантированно ловит клик и открывает список.
         this.addDrawableChild(ButtonWidget.builder(TESTED,
                         b -> Util.getOperatingSystem().open(URI.create(TESTED_URL)))
                 .dimensions(4, 4, 120, 20).build());
@@ -84,10 +82,8 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
         this.body.addAll(
             toggle("reanimated.opt.logo_enabled", c.logoEnabled, v -> c.logoEnabled = v),
             logoStyle("reanimated.opt.logo_style", c.logoStyle, v -> c.logoStyle = v),
-            // Стиль GROW — родная анимация "вырастания"
             slider("reanimated.opt.logo_duration", 0.1, 2.0, c.logoDuration, " s", v -> c.logoDuration = v.floatValue()),
             easing("reanimated.opt.logo_easing", c.logoEasing, v -> c.logoEasing = v),
-            // Стиль LETTERS — побуквенный каскад
             intSlider("reanimated.opt.logo_letter_duration", 50, 1200, c.profileLogo.durationMs, " ms", v -> c.profileLogo.durationMs = v),
             intSlider("reanimated.opt.logo_letter_delay", 0, 300, c.profileLogo.cascadeDelayMs, " ms", v -> c.profileLogo.cascadeDelayMs = v),
             slider("reanimated.opt.logo_letter_offset", -60, 60, c.profileLogo.offsetY, " px", v -> c.profileLogo.offsetY = v.floatValue()),
@@ -105,7 +101,6 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
         );
     }
 
-    /** Строка-заголовок секции в списке настроек (центрированный цветной текст, без взаимодействия). */
     private void section(String key) {
         net.minecraft.client.gui.widget.TextWidget t = new net.minecraft.client.gui.widget.TextWidget(
             Text.translatable(key).formatted(net.minecraft.util.Formatting.GOLD), this.textRenderer);
@@ -168,7 +163,6 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
         );
     }
 
-    /** Слайдер целочисленного значения с произвольной единицей. */
     private SimpleOption<Integer> intSlider(String key, int min, int max, int current, String unit, Consumer<Integer> setter) {
         return new SimpleOption<>(
             key,
@@ -199,7 +193,6 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
         );
     }
 
-    /** Слайдер целочисленной скорости в тиках. */
     private SimpleOption<Integer> ticks(String key, int min, int max, int current, Consumer<Integer> setter) {
         return new SimpleOption<>(
             key,
@@ -214,7 +207,6 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
         );
     }
 
-    /** Переключатель "Весь интерфейс / Только ванильные". true = анимировать и моды. */
     private SimpleOption<Boolean> scope(String key, boolean current, Consumer<Boolean> setter) {
         return new SimpleOption<>(
             key,

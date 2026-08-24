@@ -16,52 +16,33 @@ import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-/** Конфигурация мода. Хранится в config/reanimated.json. */
+/** Mod configuration. */
 public class ReAnimatedConfig {
-
-    // --- Профиль анимации из редактора. Пока profile.enabled = false, всё ниже
-    //     работает как раньше; когда включён — профиль задаёт анимацию открытия
-    //     целиком (смещение, масштаб, прозрачность, каскад) вместо пресета. ---
     public AnimProfile profile = new AnimProfile();
 
-    // --- Пресет анимации появления UI (единый для меню и контейнеров) ---
     public UiPreset uiPreset = UiPreset.DEFAULT;
 
-    // --- Скорость всех анимаций в тиках (20 тиков = 1 сек). Меньше = быстрее. ---
     public int animationSpeedTicks = 6;
 
-    // --- Анимировать экраны из модов? false = только ванильные (net.minecraft.*) ---
     public boolean animateModdedScreens = true;
 
-    // --- Анимация закрытия (обратная сьемка анимации открытия) ---
     public boolean closeAnimationEnabled = true;
 
-    // --- Появление экранов меню (заголовки + кнопки выезжают снизу вместе) ---
     public boolean screenOpenEnabled = true;
-    public float screenOpenDuration = 0.35f;   // сек
-    public float screenOpenDistance = 16f;     // px
+    public float screenOpenDuration = 0.35f;
+    public float screenOpenDistance = 16f;
     public EasingType screenOpenEasing = EasingType.OUT_CUBIC;
 
-    // --- Контейнеры (печь/сундук/инвентарь): панель выезжает, блюр стоит ---
     public boolean containerEnabled = true;
     public float containerDuration = 0.45f;
     public float containerDistance = 30f;
     public EasingType containerEasing = EasingType.OUT_BACK;
 
-    // --- Затемнение фона за экраном: ваниль включает его мгновенно, здесь оно
-    //     нарастает синхронно с выездом панели и гаснет на закрытии. Видно только
-    //     в игре — на главном меню за экраном панорама, а не затемнённый мир. ---
     public boolean bgFadeEnabled = true;
 
-    // --- Списки (моды в Mod Menu, сервера, миры, ресурспаки). Раньше фрейм-список
-    //     намеренно стоял на месте: обрезка (scissor) считалась в экранных координатах
-    //     и не ехала за содержимым. С 1.3 обрезка следует за матрицей
-    //     (DrawContextScissorMixin), поэтому список едет вместе с экраном, а строки
-    //     появляются по очереди сверху вниз. ---
     public boolean listsEnabled = true;
     public AnimProfile profileLists = defaultListsProfile();
 
-    /** Профиль по умолчанию для строк списка: короткий подъём снизу, быстрый каскад. */
     private static AnimProfile defaultListsProfile() {
         AnimProfile p = new AnimProfile();
         p.enabled = true;
@@ -70,7 +51,7 @@ public class ReAnimatedConfig {
         p.offsetY = 14f;
         p.scaleX = 1f;
         p.scaleY = 1f;
-        p.initialAlpha = 1f;        // строки списка гасить нечем — только сдвиг
+        p.initialAlpha = 1f;
         p.cascadeDelayMs = 28;
         p.cascadeOrder = com.pycodder.reanimated.anim.CascadeOrder.TOP_TO_BOTTOM;
         p.pivot = com.pycodder.reanimated.anim.PivotPoint.CENTER;
@@ -78,66 +59,49 @@ public class ReAnimatedConfig {
         return p;
     }
 
-    // --- Меню паузы (Esc). Свой набор настроек: этот экран открывают чаще всех,
-    //     и та же длительность, что у обычных меню, там ощущается затянутой.
-    //     pausePreset = INHERIT означает «как общий пресет». ---
     public boolean pauseEnabled = true;
     public int pauseSpeedTicks = 4;
     public UiPreset pausePreset = UiPreset.INHERIT;
     public float pauseDistance = 12f;
     public EasingType pauseEasing = EasingType.OUT_CUBIC;
 
-    // --- Наведение на кнопку: плавное увеличение ---
     public boolean hoverEnabled = true;
-    public float hoverScale = 0.07f;           // доля (0.07 = +7%)
-    public float hoverSpeed = 14f;             // скорость
+    public float hoverScale = 0.07f;
+    public float hoverSpeed = 14f;
 
-    // --- Нажатие на кнопку: кнопка вдавливается и отпружинивает обратно ---
     public boolean pressEnabled = true;
-    public float pressScale = 0.06f;           // доля (0.06 = -6% в нижней точке)
-    public float pressDuration = 0.18f;        // сек
+    public float pressScale = 0.06f;
+    public float pressDuration = 0.18f;
 
-    // --- Подсветка слота в инвентаре, плавно следует за курсором ---
     public boolean slotHighlightEnabled = true;
     public float slotHighlightSpeed = 22f;
 
-    // --- Логотип "Minecraft" на главном экране ---
     public boolean logoEnabled = true;
-    // Стиль: GROW — родная анимация (логотип целиком вырастает); LETTERS — побуквенный каскад.
     public LogoStyle logoStyle = LogoStyle.GROW;
-    // Параметры родного стиля GROW.
     public float logoDuration = 0.6f;
     public EasingType logoEasing = EasingType.OUT_BACK;
-    // Профиль побуквенного каскада (стиль LETTERS): длительность, сдвиг, масштаб, альфа,
-    // задержка и направление каскада, easing. Редактируется отдельно от профиля UI.
     public AnimProfile profileLogo = LogoLetters.defaultProfile();
 
-    // --- Каскад вкладок (достижения + креативный инвентарь) ---
-    // Вкладки появляются по очереди слева направо (сдвиг + прозрачность по индексу).
     public boolean tabsEnabled = true;
     public AnimProfile profileTabs = defaultTabsProfile();
 
-    /** Профиль по умолчанию для каскада вкладок: лёгкий подъём + проявление, слева направо. */
     private static AnimProfile defaultTabsProfile() {
         AnimProfile p = new AnimProfile();
         p.enabled = true;
         p.durationMs = 340;
         p.offsetX = 0f;
-        p.offsetY = 48f;            // выезжают снизу «из глубины» — крупный старт-сдвиг вверх
+        p.offsetY = 48f;
         p.scaleX = 1f;
         p.scaleY = 1f;
         p.initialAlpha = 0f;
         p.cascadeDelayMs = 55;
-        p.cascadeOrder = com.pycodder.reanimated.anim.CascadeOrder.TOP_TO_BOTTOM; // слева направо
+        p.cascadeOrder = com.pycodder.reanimated.anim.CascadeOrder.TOP_TO_BOTTOM;
         p.pivot = com.pycodder.reanimated.anim.PivotPoint.CENTER;
         p.easing = EasingType.OUT_CUBIC;
         return p;
     }
 
-    // ------------------------------------------------------------------
-
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    /** Для обмена настройками: то же самое, но одной строкой — удобно вставлять в чат. */
     private static final Gson SHARE_GSON = new Gson();
     private static ReAnimatedConfig INSTANCE;
 
@@ -182,12 +146,6 @@ public class ReAnimatedConfig {
         }
     }
 
-    /**
-     * Подставляет значения по умолчанию вместо отсутствующих. Нужно и при чтении файла
-     * (конфиг мог быть записан старой версией мода), и при импорте чужих настроек:
-     * незнакомое значение enum'а Gson молча превращает в null, а отсутствующий объект
-     * так и остаётся null — без этого первый же кадр падал бы с NPE.
-     */
     private void sanitize() {
         if (profile == null) profile = new AnimProfile();
         profile.sanitize();
@@ -202,34 +160,22 @@ public class ReAnimatedConfig {
         if (screenOpenEasing == null) screenOpenEasing = EasingType.OUT_CUBIC;
         if (containerEasing == null) containerEasing = EasingType.OUT_BACK;
         if (logoEasing == null) logoEasing = EasingType.OUT_BACK;
-        // Конфиг мог быть записан версией без настроек меню паузы.
         if (pausePreset == null) pausePreset = UiPreset.INHERIT;
         if (pauseEasing == null) pauseEasing = EasingType.OUT_CUBIC;
-        // Общий пресет ссылаться сам на себя не может — так настройки открывались бы мгновенно.
         if (uiPreset == UiPreset.INHERIT) uiPreset = UiPreset.DEFAULT;
     }
 
-    // --- Обмен настройками ---
-
-    /** Все настройки одной строкой — для кнопки «Копировать настройки». */
     public String toShareString() {
         return SHARE_GSON.toJson(this);
     }
 
-    /**
-     * Применяет настройки из строки, скопированной у другого игрока (или прямо из
-     * {@code reanimated.json} — формат тот же). Значения переносятся в уже живущий
-     * экземпляр конфига, а не подменяют его: открытые экраны держат ссылку на него.
-     *
-     * @return true, если строка разобрана и применена
-     */
     public static boolean applyShareString(String text) {
         if (text == null || text.isBlank()) return false;
         ReAnimatedConfig parsed;
         try {
             parsed = GSON.fromJson(text.trim(), ReAnimatedConfig.class);
         } catch (Exception e) {
-            return false; // не JSON или JSON не той формы
+            return false;
         }
         if (parsed == null) return false;
         parsed.sanitize();
@@ -240,7 +186,6 @@ public class ReAnimatedConfig {
             try {
                 f.set(target, f.get(parsed));
             } catch (IllegalAccessException ignored) {
-                // поле недоступно — оставляем текущее значение
             }
         }
         target.save();

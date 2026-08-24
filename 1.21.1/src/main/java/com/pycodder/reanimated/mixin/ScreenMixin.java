@@ -23,22 +23,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Базовая анимация появления любого экрана.
- *
- * Весь экран (фон + виджеты + ЛЮБОЙ текст) рисуется внутри
- * {@code renderWithTooltip} -> {@code this.render()}. Оборачивая renderWithTooltip
- * одной трансформацией (сдвиг и/или масштаб от центра — по выбранному пресету),
- * гарантируем, что текст, кнопки и модель игрока появляются строго вместе.
- *
- * Фон (панорама/блюр) рисуется в {@code renderBackground} — мы применяем к нему
- * ОБРАТНУЮ трансформацию, чтобы он оставался неподвижным при любом пресете.
- * Для контейнеров renderBackground переопределён в HandledScreen — там свой
- * обработчик ({@code HandledScreenMixin}).
- */
+/** Base open animation for any screen. */
 @Mixin(Screen.class)
 public abstract class ScreenMixin {
-
     @Shadow public int width;
     @Shadow public int height;
 
@@ -52,24 +39,15 @@ public abstract class ScreenMixin {
         reanimated$assignCascade();
     }
 
-    /**
-     * Раздаёт виджетам экрана ранг сверху вниз — из него каждый виджет считает
-     * свой шаг каскада. Ранг фиксируется здесь один раз, порядок каскада
-     * применяется уже при отрисовке, поэтому его смена в настройках видна сразу.
-     */
     @Unique
     private void reanimated$assignCascade() {
         Anim.cascadeCount = 1;
-        // Без ранга виджет не каскадируется вовсе — так экраны, которые мод не
-        // анимирует (чат, экраны модов в режиме "только ванильные"), остаются нетронутыми.
         if (!Anim.shouldAnimate(this)) {
             return;
         }
         Screen self = (Screen) (Object) this;
         List<ClickableWidget> widgets = new ArrayList<>();
         for (Element e : self.children()) {
-            // Фреймы-списки (сервера/миры/ресурспаки/список опций) мод не анимирует
-            // вовсе — они и шага в каскаде не занимают. См. ClickableWidgetMixin.
             if (e instanceof ClickableWidget w && w.visible && !(e instanceof ContainerWidget)) {
                 widgets.add(w);
             }
@@ -107,7 +85,6 @@ public abstract class ScreenMixin {
         reanimated$maybeFinishClose();
     }
 
-    /** По завершении обратной анимации выполняет отложенный настоящий setScreen(null). */
     @Unique
     private void reanimated$maybeFinishClose() {
         if (!Anim.isClosing()) return;
@@ -120,9 +97,6 @@ public abstract class ScreenMixin {
 
     @Inject(method = "renderBackground", at = @At("HEAD"))
     private void reanimated$bgHead(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        // Контейнеры сами возвращают фон на место (HandledScreenMixin). Если тронуть его
-        // ещё и здесь (в 1.21.5+ HandledScreen.renderBackground зовёт super.renderBackground),
-        // получится двойная обратная трансформация — блюр «уезжает» вместе с панелью.
         reanimated$bgPushed = !reanimated$isContainer() && Anim.transformActive(false) && Anim.shouldAnimate(this);
         if (reanimated$bgPushed) {
             MatrixStack m = context.getMatrices();

@@ -14,18 +14,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Контейнерные экраны. Весь экран (панель, слоты, МОДЕЛЬ ИГРОКА — всё рисуется
- * внутри renderWithTooltip) выезжает/масштабируется вместе через ScreenMixin.
- * Здесь:
- *  - возвращаем РАЗМЫТЫЙ ФОН на место ОБРАТНОЙ трансформацией (масштаб+сдвиг)
- *    вокруг renderBackground, снимая её прямо перед отрисовкой панели — так
- *    панель и модель игрока едут вместе со слотами, а блюр стоит;
- *  - рисуем плавно догоняющую курсор подсветку слота.
- */
+/** Container screens. */
 @Mixin(HandledScreen.class)
 public abstract class HandledScreenMixin implements com.pycodder.reanimated.anim.PanelBounds {
-
     @Shadow protected int x;
     @Shadow protected int y;
     @Shadow protected int backgroundWidth;
@@ -48,7 +39,6 @@ public abstract class HandledScreenMixin implements com.pycodder.reanimated.anim
     @Unique private float reanimated$slotY = Float.NaN;
     @Unique private long reanimated$slotTime = 0L;
 
-    /** Обратная трансформация фона — та же математика, что и у обычных экранов. */
     @Unique
     private void reanimated$applyInverse(MatrixStack m) {
         net.minecraft.client.util.Window win = net.minecraft.client.MinecraftClient.getInstance().getWindow();

@@ -20,28 +20,15 @@ import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-/**
- * Редактор профиля анимации: слева — параметры, справа — живое превью из трёх
- * элементов, которое проигрывает ровно ту анимацию, что получат настоящие экраны.
- *
- * Правки идут в рабочую копию профиля ({@link #working}) и попадают в конфиг
- * только по кнопке Save — Cancel и Esc отменяют всё.
- *
- * Строки списка добавлены через {@code addSelectableChild}: ввод и фокус ведёт
- * ванильный Screen, а рисуем мы их сами внутри scissor'а, чтобы список скроллился.
- */
+/** Animation profile editor: parameters on the left, a live three-element preview on the right playing exactly the animation being configured. */
 public class AnimProfileEditorScreen extends Screen {
-
     private static final int ROW_H = 22;
     private static final int LIST_W = 200;
     private static final int LABEL_W = 100;
     private static final int GAP = 40;
     private static final int PREVIEW_W = 150;
     private static final int PREVIEW_ELEMENTS = 3;
-    /** Запас вокруг превью, в котором ещё видно улетающие элементы. Не доходит до
-     *  полосы прокрутки списка, иначе клик по ней перезапускал бы превью. */
     private static final int PREVIEW_MARGIN = 20;
-    /** Пауза между повторами превью, мс. */
     private static final int PREVIEW_PAUSE = 900;
 
     private static final Text PARAMS = Text.translatable("reanimated.editor.params");
@@ -66,7 +53,7 @@ public class AnimProfileEditorScreen extends Screen {
         this.working = ReAnimatedConfig.get().profile.copy();
     }
 
-    /** Строка списка: подпись слева и виджеты справа, либо кнопка во всю ширину. */
+    /** List row: a label on the left with widgets on the right, or a full-width button. */
     private final class Row {
         private final Text label;
         private final List<ClickableWidget> widgets = new ArrayList<>();
@@ -161,7 +148,6 @@ public class AnimProfileEditorScreen extends Screen {
 
         cycleRow(() -> Text.translatable("reanimated.editor.reset"), () -> {
             working.copyFrom(new AnimProfile());
-            // Поля хранят текст — их надо пересоздать, чтобы показать новые значения.
             this.client.execute(this::clearAndInit);
         });
     }
@@ -211,13 +197,11 @@ public class AnimProfileEditorScreen extends Screen {
                 apply.accept(Float.parseFloat(s));
                 restartPreview();
             } catch (NumberFormatException ignored) {
-                // Промежуточный ввод ("", "-", "1.") — ждём, пока значение станет числом.
             }
         });
         return field;
     }
 
-    /** "15.0", "0.075" — без хвостовых нулей, но всегда с дробной частью. */
     private static String fmt(float v) {
         String s = String.format(Locale.ROOT, "%.3f", v);
         s = s.replaceAll("0+$", "");
@@ -287,10 +271,6 @@ public class AnimProfileEditorScreen extends Screen {
         context.fill(x, barY, x + 4, barY + barH, 0xFFAAAAAA);
     }
 
-    /**
-     * Превью: те же формулы, что и у настоящих экранов, только точка масштабирования
-     * берётся от области превью, а таймлайн зациклен.
-     */
     private void renderPreview(DrawContext context, float delta) {
         int total = working.totalMs(PREVIEW_ELEMENTS);
         float elapsed = working.enabled
@@ -304,7 +284,6 @@ public class AnimProfileEditorScreen extends Screen {
             ButtonWidget button = previewButtons.get(i);
             float e = working.progress(elapsed, working.slotFor(i, PREVIEW_ELEMENTS));
 
-            // Пивот — относительно самой кнопки (как у настоящих кнопок).
             float pivotY = button.getY() + button.getHeight() * working.pivot.fy;
 
             Matrix3x2fStack m = context.getMatrices();
@@ -312,7 +291,6 @@ public class AnimProfileEditorScreen extends Screen {
             m.translate(working.offsetXAt(e), working.offsetYAt(e));
             UiTransform.pivotScale(m, pivotX, pivotY, working.scaleXAt(e), working.scaleYAt(e));
             button.setAlpha(working.alphaAt(e));
-            // Мышь за пределами экрана: превью не должно подсвечиваться под курсором.
             button.render(context, -1, -1, delta);
             button.setAlpha(1f);
             m.popMatrix();
@@ -337,8 +315,8 @@ public class AnimProfileEditorScreen extends Screen {
             restartPreview();
             return true;
         }
-        // Обрезанные scissor'ом строки видно, но кликать по ним нельзя: иначе клик
-        // попадёт в невидимую половину строки поверх кнопок под списком.
+        // Rows clipped by the scissor stay visible, but must not react to clicks:
+        // the click would land in the row's hidden half, over the buttons below the list.
         List<ClickableWidget> hidden = new ArrayList<>();
         for (Row row : rows) {
             if (!row.fullyVisible()) {

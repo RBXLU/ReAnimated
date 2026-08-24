@@ -14,17 +14,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Плавное появление вкладок креативного инвентаря (Minecraft 26.x — render-state extraction).
- *
- * Верхние вкладки выезжают снизу, нижние — сверху; пока вкладка «за плашкой», её обрезает
- * scissor по краю панели. Порядок каскада — по столбцу. В extraction-модели scissor и матрица
- * записываются на каждый элемент, поэтому флаш не нужен (в отличие от 1.21.1). Границы панели —
- * через {@link PanelBounds} (реализует {@code HandledScreenMixin} на {@code AbstractContainerScreen}).
- */
+/** Creative inventory tabs fade in (Minecraft 26.x: render-state extraction). */
 @Mixin(CreativeModeInventoryScreen.class)
 public class CreativeInventoryScreenMixin {
-
     @Unique private boolean reanimated$pushed = false;
 
     @Inject(method = "extractTabButton(Lnet/minecraft/client/gui/GuiGraphicsExtractor;IILnet/minecraft/world/item/CreativeModeTab;)V", at = @At("HEAD"))

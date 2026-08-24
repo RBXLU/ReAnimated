@@ -21,24 +21,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/**
- * Фреймы-списки ({@code AbstractContainerWidget}) здесь не увеличиваются под курсором и не
- * каскадируются покнопочно — у них свой каскад по строкам (EntryListWidgetMixin) (см. {@link #reanimated$freezeFrame}).
- * Для остальных виджетов здесь две независимые вещи поверх обычной отрисовки:
- *
- * 1. Покнопочный «вход» — анимация КНОПОК (профиль/Студия). Работает ПОВЕРХ
- *    анимации экрана (пресета): каждая кнопка сама смещается/масштабируется/гаснет
- *    вокруг своего пивота по своему шагу каскада. Пресет двигает экран целиком,
- *    этот слой — кнопки; они складываются, а не исключают друг друга.
- *
- * 2. Плавное увеличение при наведении курсора (работает в любом режиме).
- *
- * Версия для 1.21.6+ (NeoForge / Mojmap): GUI рисуется 2D-матрицей {@link Matrix3x2fStack}.
- * Отдельного затемнения текста здесь не нужно — ваниль этой эпохи применяет альфу сама.
- */
+/** List frames ({@code AbstractContainerWidget}) are neither scaled on hover nor cascaded per button here: they have their own per-row cascade. */
 @Mixin(AbstractWidget.class)
 public abstract class ClickableWidgetMixin implements CascadeTarget {
-
     @Shadow public abstract int getX();
     @Shadow public abstract int getY();
     @Shadow public abstract int getWidth();
@@ -48,7 +33,6 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
 
     @Unique private float reanimated$hover = 0f;
     @Unique private long reanimated$lastTime = 0L;
-    /** Момент нажатия на эту кнопку; 0 — анимация вдавливания не играет. */
     @Unique private long reanimated$pressTime = 0L;
     @Unique private int reanimated$pushed = 0;
     @Unique private float reanimated$savedAlpha = -1f;
@@ -77,11 +61,6 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
         return this.alpha;
     }
 
-    /**
-     * Порог видимости. Ниже него ваниль (Font.tweakTransparency) считает цвет текста
-     * "почти прозрачным" и делает надпись ПОЛНОСТЬЮ непрозрачной: рамка уже невидима, а текст
-     * вспыхивает сплошным. Поэтому настолько погасший виджет не рисуем вовсе.
-     */
     @Unique private static final float REANIMATED$MIN_ALPHA = 4f / 255f;
 
     @Unique
@@ -109,30 +88,17 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
 
         reanimated$applyProfile(graphics);
         if (reanimated$isTextField()) {
-            return; // поле ввода под курсором не трогаем — см. reanimated$isTextField
+            return;
         }
         reanimated$applyHover(graphics);
         reanimated$applyPress(graphics);
     }
 
-    /**
-     * Поля ввода из наведения и нажатия исключены. Масштаб — чисто визуальный: клики,
-     * курсор и выделение текста ваниль считает по НЕмасштабированным координатам, поэтому
-     * увеличенное поле «плывёт» под мышью и попасть в нужный символ становится нечем.
-     * Каскад появления ({@code applyProfile}) полям оставлен — он отыгрывает один раз
-     * при открытии экрана и с вводом не пересекается.
-     */
     @Unique
     private boolean reanimated$isTextField() {
         return (Object) this instanceof net.minecraft.client.gui.components.EditBox;
     }
 
-    /**
-     * Отметка нажатия. Цепляемся к звуку клика, а не к {@code onPress}: ваниль играет
-     * его и при клике мышью, и при нажатии Enter/Пробела на выбранной кнопке, и делает
-     * это уже после проверок active/visible. Так вдавливание срабатывает ровно тогда,
-     * когда кнопка действительно сработала.
-     */
     @Inject(method = "playDownSound", at = @At("HEAD"))
     private void reanimated$onDown(net.minecraft.client.sounds.SoundManager soundManager, CallbackInfo ci) {
         if (ReAnimatedConfig.get().pressEnabled) {
@@ -140,13 +106,6 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
         }
     }
 
-    /**
-     * Второй триггер нажатия — сам клик мышью. Одного {@code playDownSound} мало:
-     * ваниль переопределяет его пустым у слайдеров (они не щёлкают) и своим у полей
-     * ввода, так что до базовой реализации — а значит и до нас — вызов не доходит и
-     * ползунок «проседал» бы только от клавиатуры. Отмечаем на RETURN и только если
-     * виджет клик действительно принял.
-     */
     @Inject(method = "mouseClicked", at = @At("RETURN"))
     private void reanimated$onMouseDown(net.minecraft.client.input.MouseButtonEvent event, boolean doubled, CallbackInfoReturnable<Boolean> cir) {
         if (Boolean.TRUE.equals(cir.getReturnValue()) && ReAnimatedConfig.get().pressEnabled) {
@@ -154,28 +113,14 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
         }
     }
 
-    /**
-     * Возврат фрейма-списка (сервера, миры, ресурспаки, список опций, список модов)
-     * на место — только когда анимация списков ВЫКЛЮЧЕНА. Экран уже сдвинут
-     * ScreenMixin'ом, поэтому здесь снимаем сдвиг обратно, ровно с этого виджета.
-     *
-     * Исторически список замораживался всегда: его содержимое ехало вместе с экраном,
-     * а обрезка (scissor) считалась в экранных координатах и оставалась на месте, из-за
-     * чего фрейм разъезжался сам с собой. С 1.3 обрезка следует за матрицей
-     * (DrawContextScissorMixin; в 1.21.6+ и 26.x это делает уже сама ваниль), поэтому
-     * по умолчанию список едет вместе со всем экраном.
-     */
     @Unique
     private void reanimated$freezeFrame(GuiGraphics graphics) {
-        // Списки теперь едут вместе с экраном, а их строки появляются каскадом
-        // (EntryListWidgetMixin). Заморозка осталась запасным вариантом — на случай,
-        // если игрок выключил анимацию списков в настройках.
         if (ReAnimatedConfig.get().listsEnabled) {
             return;
         }
         Minecraft client = Minecraft.getInstance();
         if (!Anim.shouldAnimate(client.screen)) {
-            return; // экран и так не анимируется — снимать нечего
+            return;
         }
         boolean container = client.screen instanceof AbstractContainerScreen;
         if (!Anim.transformActive(container)) {
@@ -203,8 +148,6 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
     @Unique
     private void reanimated$applyProfile(GuiGraphics graphics) {
         AnimProfile p = ReAnimatedConfig.get().profile;
-        // Ранга нет у виджетов вне анимируемого экрана — например, у превью
-        // в редакторе профиля: оно рисует и анимирует себя само.
         if (!p.enabled || reanimated$rank < 0) {
             return;
         }
@@ -219,12 +162,9 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
         }
 
         if (p.identityAt(own)) {
-            return; // кнопка уже на месте — матрицу не трогаем
+            return;
         }
 
-        // Полный покнопочный «вход» ПОВЕРХ трансформации экрана (пресета): кнопка
-        // сама смещается/масштабируется вокруг своего пивота. Так пресет (экран) и
-        // профиль/Студия (кнопки) складываются, а не исключают друг друга.
         Matrix3x2fStack m = graphics.pose();
         m.pushMatrix();
         reanimated$pushed++;
@@ -250,7 +190,7 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
         reanimated$hover = Easing.approach(reanimated$hover, target, dt, c.hoverSpeed);
 
         if (reanimated$hover < 0.001f) {
-            return; // не наведено — без накладных расходов
+            return;
         }
 
         float scale = 1f + c.hoverScale * reanimated$hover;
@@ -260,11 +200,6 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
         UiTransform.pivotScale(matrices, getX() + getWidth() / 2f, getY() + getHeight() / 2f, scale, scale);
     }
 
-    /**
-     * Вдавливание при нажатии: кнопка быстро уменьшается и упруго возвращается
-     * ({@link Easing#press}). Играет поверх наведения — они складываются, поэтому
-     * нажатая кнопка остаётся увеличенной под курсором и «проседает» из этого состояния.
-     */
     @Unique
     private void reanimated$applyPress(GuiGraphics graphics) {
         if (reanimated$pressTime == 0L) {
@@ -274,7 +209,7 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
         float durationMs = Math.max(0.01f, c.pressDuration) * 1000f;
         float t = (System.currentTimeMillis() - reanimated$pressTime) / durationMs;
         if (t >= 1f || !c.pressEnabled) {
-            reanimated$pressTime = 0L; // отыграла (или выключили в настройках)
+            reanimated$pressTime = 0L;
             return;
         }
 

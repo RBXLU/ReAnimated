@@ -8,23 +8,9 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
-/**
- * Модель игрока в инвентаре (та, что следит за курсором) — вслед за панелью.
- *
- * С 1.21.6 ваниль рисует такие «картинки в картинке» (модель игрока, знамя в ткацком
- * станке, скин в настройках) не через матрицу интерфейса, а отдельным вызовом
- * {@code submitEntityRenderState}: в него уходят СЫРЫЕ экранные координаты прямоугольника и размер,
- * а текущая матрица игнорируется. Обрезку ваниль при этом матрицей прогоняет — поэтому
- * во время анимации модель оставалась стоять на месте и обрезалась наполовину, «дожидаясь»,
- * пока панель до неё доедет.
- *
- * Здесь прямоугольник и размер прогоняются через ту же матрицу, что и вся панель.
- * Наши трансформации — только сдвиг и масштаб по осям (без поворота), поэтому хватает
- * двух углов. При единичной матрице (анимации нет) это точный no-op.
- */
+/** The inventory player model, the one that follows the cursor, rides along with the panel. */
 @Mixin(GuiGraphics.class)
 public abstract class GuiGraphicsEntityMixin {
-
     @Shadow public abstract Matrix3x2fStack pose();
 
     @ModifyVariable(method = "submitEntityRenderState", at = @At("HEAD"), argsOnly = true, ordinal = 0)
@@ -47,7 +33,6 @@ public abstract class GuiGraphicsEntityMixin {
         return reanimated$mapY(v);
     }
 
-    /** Размер модели: масштабируется вместе с панелью (пресеты «из фона»/«с переднего плана»). */
     @ModifyVariable(method = "submitEntityRenderState", at = @At("HEAD"), argsOnly = true, ordinal = 0)
     private float reanimated$entityScale(float v) {
         Matrix3x2fStack m = pose();

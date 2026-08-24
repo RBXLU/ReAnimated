@@ -20,22 +20,8 @@ import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-/**
- * Студия анимаций — отдельный экран для «сборки» своей анимации открытия/закрытия
- * с нуля. Инструменты: живые ползунки (вместо полей ввода), готовые пресеты,
- * визуальный график кривой easing и ДВА превью — как экран открывается и как
- * закрывается (закрытие = точный реверс открытия).
- *
- * Редактирует ту же модель, что и {@link AnimProfileEditorScreen}
- * ({@link ReAnimatedConfig#profile}) — правки идут в рабочую копию и попадают в
- * конфиг только по Save. Профиль-редактор при этом не трогается.
- *
- * Левая колонка — прокручиваемый список инструментов (добавлены через
- * {@code addWidget}, рисуются вручную внутри scissor'а). Правая — график
- * easing сверху и два превью снизу.
- */
+/** Animation Studio: a separate screen for building your own open/close animation from scratch. */
 public class AnimationStudioScreen extends Screen {
-
     private static final int ROW_H = 23;
     private static final int HEADER_H = 15;
     private static final int PREVIEW_ELEMENTS = 3;
@@ -44,7 +30,7 @@ public class AnimationStudioScreen extends Screen {
     private final Screen parent;
     private final AnimProfile working;
 
-    /** Элемент списка инструментов: либо заголовок-подпись, либо виджет во всю ширину. */
+    /** Tools list entry: either a heading label or a full-width widget. */
     private final class Item {
         private final Component header;
         private final AbstractWidget widget;
@@ -98,7 +84,6 @@ public class AnimationStudioScreen extends Screen {
         rightX = listX + listW + 22;
         rightW = Math.max(120, this.width - rightX - margin);
 
-        // Правая половина по вертикали: график easing сверху, два превью снизу.
         graphTop = listTop;
         int visualH = listBottom - listTop;
         graphBottom = graphTop + Math.max(48, (int) (visualH * 0.28));
@@ -119,8 +104,6 @@ public class AnimationStudioScreen extends Screen {
 
         restartPreview();
     }
-
-    // ------------------------------------------------------------------ tools
 
     private void buildItems() {
         header("reanimated.studio.section_params");
@@ -204,12 +187,10 @@ public class AnimationStudioScreen extends Screen {
         items.add(new Item(null, addWidget(button)));
     }
 
-    /** Кнопка-пресет: применяет заготовку и пересобирает список, чтобы ползунки показали новые значения. */
     private void preset(String key, Runnable apply) {
         Button button = Button.builder(Component.translatable(key), b -> {
             apply.run();
             restartPreview();
-            // Значения слайдеров кэшируются в самих виджетах — пересоздаём список.
             this.minecraft.execute(this::rebuildWidgets);
         }).bounds(listX, 0, listW, 20).build();
         items.add(new Item(null, addWidget(button)));
@@ -225,7 +206,7 @@ public class AnimationStudioScreen extends Screen {
         return values[(value.ordinal() + 1) % values.length];
     }
 
-    /** Ползунок вещественного значения с живым откликом превью. */
+    /** Floating-point slider that updates the preview live. */
     private final class FloatSlider extends AbstractSliderButton {
         private final Component label;
         private final String unit;
@@ -266,14 +247,11 @@ public class AnimationStudioScreen extends Screen {
         }
     }
 
-    /** "1.35", "0.5" — без хвостовых нулей, но всегда с дробной частью. */
     private static String fmt(float v) {
         String s = String.format(Locale.ROOT, "%.2f", v);
         s = s.replaceAll("0+$", "");
         return s.endsWith(".") ? s + "0" : s;
     }
-
-    // ------------------------------------------------------------------ layout
 
     private void layout() {
         int offset = (int) Math.round(scroll);
@@ -316,8 +294,6 @@ public class AnimationStudioScreen extends Screen {
         this.minecraft.setScreen(parent);
     }
 
-    // ------------------------------------------------------------------ render
-
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         super.render(graphics, mouseX, mouseY, delta);
@@ -326,7 +302,6 @@ public class AnimationStudioScreen extends Screen {
         graphics.drawCenteredString(font,
             Component.translatable("reanimated.studio.tools"), listX + listW / 2, 28, 0xFFAAAAAA);
 
-        // Список инструментов.
         graphics.fill(listX - 6, listTop - 4, listX + listW + 6, listBottom + 4, 0xB0000000);
         graphics.enableScissor(listX - 6, listTop, listX + listW + 6, listBottom);
         for (Item item : items) {
@@ -356,7 +331,6 @@ public class AnimationStudioScreen extends Screen {
         graphics.fill(x, barY, x + 4, barY + barH, 0xFFAAAAAA);
     }
 
-    /** График выбранной кривой easing с бегущим маркером текущего прогресса открытия. */
     private void renderGraph(GuiGraphics graphics) {
         int pad = 6;
         int x0 = rightX + pad;
@@ -372,11 +346,9 @@ public class AnimationStudioScreen extends Screen {
         int gh = y1 - y0;
         if (gw <= 2 || gh <= 2) return;
 
-        // Диапазон значений с запасом под «отскок» OUT_BACK (может уйти за 0..1).
         final float vMin = -0.3f;
         final float vMax = 1.3f;
 
-        // Линии 0 и 1.
         int zeroY = valueToY(0f, y0, gh, vMin, vMax);
         int oneY = valueToY(1f, y0, gh, vMin, vMax);
         graphics.fill(x0, zeroY, x1, zeroY + 1, 0x40FFFFFF);
@@ -397,7 +369,6 @@ public class AnimationStudioScreen extends Screen {
             prevY = py;
         }
 
-        // Бегущий маркер: где сейчас находится анимация открытия по времени.
         int total = working.totalMs(PREVIEW_ELEMENTS);
         float loop = loopElapsed(total);
         float openMs = Math.min(loop, working.durationMs);
@@ -413,12 +384,10 @@ public class AnimationStudioScreen extends Screen {
         return y0 + Math.round((1f - f) * gh);
     }
 
-    /** Оба превью: сверху — открытие (0→1), снизу — закрытие (реверс, 1→0). */
     private void renderPreviews(GuiGraphics graphics, float delta) {
         int total = working.totalMs(PREVIEW_ELEMENTS);
         float loop = loopElapsed(total);
         float openMs = working.enabled ? loop : Float.MAX_VALUE;
-        // Закрытие — точный реверс: время идёт от полной длительности к нулю.
         float closeMs = working.enabled ? (total - Math.min(loop, total)) : Float.MAX_VALUE;
 
         renderPreviewPanel(graphics, delta, "reanimated.studio.open", openTop, openBottom, openMs);
@@ -449,7 +418,6 @@ public class AnimationStudioScreen extends Screen {
             int py = innerTop + i * step + Math.max(0, (step - panelH) / 2);
             float e = working.progress(elapsedMs, working.slotFor(i, PREVIEW_ELEMENTS));
 
-            // Пивот — относительно самой панели (как у настоящих кнопок).
             float pivotX = panelX + panelW * working.pivot.fx;
             float pivotY = py + panelH * working.pivot.fy;
 
@@ -463,16 +431,15 @@ public class AnimationStudioScreen extends Screen {
         graphics.disableScissor();
     }
 
-    /** Мини-макет UI-окна: рамка, тело, полоса заголовка и пара «слотов» — с учётом прозрачности. */
     private void drawUiElement(GuiGraphics graphics, int x, int y, int w, int h, float alpha) {
-        graphics.fill(x - 1, y - 1, x + w + 1, y + h + 1, argb(0x2B2B2B, alpha)); // рамка
-        graphics.fill(x, y, x + w, y + h, argb(0xC6C6C6, alpha));                 // тело панели
-        graphics.fill(x, y, x + w, y + 6, argb(0x8B8B8B, alpha));                 // заголовок
+        graphics.fill(x - 1, y - 1, x + w + 1, y + h + 1, argb(0x2B2B2B, alpha));
+        graphics.fill(x, y, x + w, y + h, argb(0xC6C6C6, alpha));
+        graphics.fill(x, y, x + w, y + 6, argb(0x8B8B8B, alpha));
         int sy = y + 9;
         for (int s = 0; s < 4; s++) {
             int sx = x + 4 + s * 11;
             if (sx + 8 > x + w || sy + 8 > y + h) break;
-            graphics.fill(sx, sy, sx + 8, sy + 8, argb(0x373737, alpha));         // «слот»
+            graphics.fill(sx, sy, sx + 8, sy + 8, argb(0x373737, alpha));
         }
     }
 
@@ -480,8 +447,6 @@ public class AnimationStudioScreen extends Screen {
         int a = Math.round(Mth.clamp(alpha, 0f, 1f) * 255f);
         return (a << 24) | (rgb & 0xFFFFFF);
     }
-
-    // ------------------------------------------------------------------ input
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
@@ -495,13 +460,12 @@ public class AnimationStudioScreen extends Screen {
 
     @Override
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) {
-        // Клик по любому из превью перезапускает цикл.
         if (click.x() >= rightX && click.x() <= rightX + rightW && click.y() >= openTop && click.y() <= closeBottom) {
             restartPreview();
             return true;
         }
-        // Строки, обрезанные scissor'ом, видно, но кликать по ним нельзя — иначе клик
-        // попадёт в невидимую часть строки поверх кнопок под списком.
+        // Rows clipped by the scissor stay visible, but must not react to clicks:
+        // the click would land in the row's hidden half, over the buttons below the list.
         List<AbstractWidget> hidden = new ArrayList<>();
         for (Item item : items) {
             if (item.widget != null && item.widget.visible

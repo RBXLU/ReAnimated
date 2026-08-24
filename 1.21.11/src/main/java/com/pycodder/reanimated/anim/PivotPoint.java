@@ -1,6 +1,6 @@
 package com.pycodder.reanimated.anim;
 
-/** Точка, относительно которой масштабируется интерфейс. Доли от ширины/высоты области. */
+/** Pivot the interface is scaled around. */
 public enum PivotPoint {
     CENTER("Center", 0.5f, 0.5f),
     TOP("Top", 0.5f, 0f),

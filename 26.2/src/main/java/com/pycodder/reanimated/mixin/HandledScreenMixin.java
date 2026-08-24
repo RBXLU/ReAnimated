@@ -14,15 +14,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Контейнерные экраны (Minecraft 26.x). Сам выезд/масштаб панели делает ScreenMixin
- * (общая обёртка), а блюр остаётся на месте (встречный трансформ в extractBackground).
- * Здесь — плавно догоняющая курсор подсветка слота (рисуется в RETURN extractRenderState,
- * то есть внутри общего трансформа экрана — значит едет вместе со слотами).
- */
+/** Container screens (Minecraft 26.x). */
 @Mixin(AbstractContainerScreen.class)
 public abstract class HandledScreenMixin implements com.pycodder.reanimated.anim.PanelBounds {
-
     @Shadow protected int leftPos;
     @Shadow protected int topPos;
     @Shadow protected int imageWidth;

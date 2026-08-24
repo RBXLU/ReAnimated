@@ -2,20 +2,7 @@ package com.pycodder.reanimated.anim;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 
-/**
- * Трансформация ЭКРАНА (UI) целиком — задаётся ПРЕСЕТОМ ({@link UiPreset}).
- * Это «анимация UI»: экран/панель контейнера выезжает/масштабируется.
- *
- * Покнопочная «анимация кнопок» (профиль/Студия) — отдельный слой, он кладётся
- * ПОВЕРХ этой трансформации в {@code ClickableWidgetMixin} и здесь не участвует.
- * Так пресет (UI) и профиль (кнопки) работают вместе, а не исключают друг друга.
- *
- * Версия для 1.21.1–1.21.5 (NeoForge / Mojmap): GUI рисуется 3D-матрицей
- * {@link PoseStack} (pushPose/popPose, translate/scale в три аргумента).
- *
- * {@link #forward} едет вместе с содержимым экрана, {@link #inverse} возвращает
- * на место фон/блюр.
- */
+/** Transform of the whole SCREEN (UI), driven by the PRESET ({@link UiPreset}). */
 public final class UiTransform {
     private UiTransform() {}
 
@@ -28,7 +15,6 @@ public final class UiTransform {
         }
     }
 
-    /** Обратная трансформация — строго в обратном порядке к {@link #forward}. */
     public static void inverse(PoseStack m, float width, float height, boolean container) {
         float sy = Anim.slideY(container);
         float sc = Anim.scale(container);

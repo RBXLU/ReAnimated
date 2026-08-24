@@ -16,81 +16,59 @@ import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-/** Конфигурация мода. Хранится в config/reanimated.json. */
+/** Mod configuration. */
 public class ReAnimatedConfig {
-
-    // --- Профиль анимации из редактора. Пока profile.enabled = false, всё ниже
-    //     работает как раньше; когда включён — профиль задаёт анимацию открытия
-    //     целиком (смещение, масштаб, прозрачность, каскад) вместо пресета. ---
     public AnimProfile profile = new AnimProfile();
 
-    // --- Пресет анимации появления UI (единый для меню и контейнеров) ---
     public UiPreset uiPreset = UiPreset.DEFAULT;
 
-    // --- Скорость всех анимаций в тиках (20 тиков = 1 сек). Меньше = быстрее. ---
     public int animationSpeedTicks = 6;
 
-    // --- Анимировать экраны из модов? false = только ванильные (net.minecraft.*) ---
     public boolean animateModdedScreens = true;
 
-    // --- Анимация закрытия (обратная сьемка анимации открытия) ---
     public boolean closeAnimationEnabled = true;
 
-    // --- Появление экранов меню (заголовки + кнопки выезжают снизу вместе) ---
     public boolean screenOpenEnabled = true;
-    public float screenOpenDuration = 0.35f;   // сек
-    public float screenOpenDistance = 16f;     // px
+    public float screenOpenDuration = 0.35f;
+    public float screenOpenDistance = 16f;
     public EasingType screenOpenEasing = EasingType.OUT_CUBIC;
 
-    // --- Контейнеры (печь/сундук/инвентарь): панель выезжает, блюр стоит ---
     public boolean containerEnabled = true;
     public float containerDuration = 0.45f;
     public float containerDistance = 30f;
     public EasingType containerEasing = EasingType.OUT_BACK;
 
-    // --- Наведение на кнопку: плавное увеличение ---
     public boolean hoverEnabled = true;
-    public float hoverScale = 0.07f;           // доля (0.07 = +7%)
-    public float hoverSpeed = 14f;             // скорость
+    public float hoverScale = 0.07f;
+    public float hoverSpeed = 14f;
 
-    // --- Подсветка слота в инвентаре, плавно следует за курсором ---
     public boolean slotHighlightEnabled = true;
     public float slotHighlightSpeed = 22f;
 
-    // --- Логотип "Minecraft" на главном экране ---
     public boolean logoEnabled = true;
-    // Стиль: GROW — родная анимация (логотип целиком вырастает); LETTERS — побуквенный каскад.
     public LogoStyle logoStyle = LogoStyle.GROW;
-    // Параметры родного стиля GROW.
     public float logoDuration = 0.6f;
     public EasingType logoEasing = EasingType.OUT_BACK;
-    // Профиль побуквенного каскада (стиль LETTERS): длительность, сдвиг, масштаб, альфа,
-    // задержка и направление каскада, easing. Редактируется отдельно от профиля UI.
     public AnimProfile profileLogo = LogoLetters.defaultProfile();
 
-    // --- Каскад вкладок (достижения + креативный инвентарь) ---
-    // Вкладки появляются по очереди слева направо (сдвиг + прозрачность по индексу).
     public boolean tabsEnabled = true;
     public AnimProfile profileTabs = defaultTabsProfile();
 
-    /** Профиль по умолчанию для каскада вкладок: лёгкий подъём + проявление, слева направо. */
     private static AnimProfile defaultTabsProfile() {
         AnimProfile p = new AnimProfile();
         p.enabled = true;
         p.durationMs = 340;
         p.offsetX = 0f;
-        p.offsetY = 48f;            // выезжают снизу «из глубины» — крупный старт-сдвиг вверх
+        p.offsetY = 48f;
         p.scaleX = 1f;
         p.scaleY = 1f;
         p.initialAlpha = 0f;
         p.cascadeDelayMs = 55;
-        p.cascadeOrder = com.pycodder.reanimated.anim.CascadeOrder.TOP_TO_BOTTOM; // слева направо
+        p.cascadeOrder = com.pycodder.reanimated.anim.CascadeOrder.TOP_TO_BOTTOM;
         p.pivot = com.pycodder.reanimated.anim.PivotPoint.CENTER;
         p.easing = EasingType.OUT_CUBIC;
         return p;
     }
-
-    // ------------------------------------------------------------------
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static ReAnimatedConfig INSTANCE;
@@ -112,11 +90,8 @@ public class ReAnimatedConfig {
             try (Reader r = Files.newBufferedReader(p)) {
                 ReAnimatedConfig cfg = GSON.fromJson(r, ReAnimatedConfig.class);
                 if (cfg != null) {
-                    // Конфиг мог быть записан версией без профиля, а неизвестные
-                    // значения enum'ов Gson молча превращает в null.
                     if (cfg.profile == null) cfg.profile = new AnimProfile();
                     cfg.profile.sanitize();
-                    // Конфиг мог быть записан версией без логотип-каскада.
                     if (cfg.profileLogo == null) cfg.profileLogo = LogoLetters.defaultProfile();
                     cfg.profileLogo.sanitize();
                     if (cfg.logoStyle == null) cfg.logoStyle = LogoStyle.GROW;

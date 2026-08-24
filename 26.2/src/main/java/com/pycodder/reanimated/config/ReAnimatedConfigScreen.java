@@ -20,14 +20,8 @@ import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
 import java.util.function.Supplier;
 
-/**
- * Экран настроек мода (Minecraft 26.x). В 26.x новая render-state система и у Screen
- * нет render(GuiGraphics) — поэтому рендер не переопределяем (заголовок не рисуем),
- * виджеты сами отрисовываются через addRenderableWidget. Только стабильные примитивы
- * (Button + свой слайдер), без OptionInstance/OptionsList и без mouseClicked.
- */
+/** Mod settings screen (Minecraft 26.x). */
 public class ReAnimatedConfigScreen extends Screen {
-
     private static final String AUTHOR_URL = "https://modrinth.com/user/pycodder";
     private static final String TESTED_URL = "https://github.com/RBXLU/ReAnimated/blob/main/testedmods.txt";
     private final Screen parent;
@@ -40,8 +34,6 @@ public class ReAnimatedConfigScreen extends Screen {
     @Override
     protected void init() {
         ReAnimatedConfig c = ReAnimatedConfig.get();
-        // Элементы списка: String — заголовок секции (своя строка во всю ширину),
-        // AbstractWidget — обычная опция (половина ширины, по две в строке).
         List<Object> rows = new ArrayList<>();
 
         rows.add("reanimated.section.general");
@@ -92,7 +84,7 @@ public class ReAnimatedConfigScreen extends Screen {
         int col = 0;
         for (Object item : rows) {
             if (item instanceof String key) {
-                if (col != 0) {          // недобранную строку закрываем перед заголовком
+                if (col != 0) {
                     y += rowH + vgap;
                     col = 0;
                 }
@@ -230,7 +222,7 @@ public class ReAnimatedConfigScreen extends Screen {
         this.minecraft.setScreenAndShow(parent);
     }
 
-    /** Слайдер на стабильном AbstractSliderButton (value: 0..1). */
+    /** Slider built on the stable AbstractSliderButton (value: 0..1). */
     private static class ConfigSlider extends AbstractSliderButton {
         private final String key;
         private final double min;
@@ -262,7 +254,7 @@ public class ReAnimatedConfigScreen extends Screen {
         }
     }
 
-    /** Целочисленный слайдер (тики). value: 0..1 -> [min,max]. */
+    /** Integer slider (ticks). */
     private static class IntConfigSlider extends AbstractSliderButton {
         private final String key;
         private final int min;

@@ -15,23 +15,13 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Анимация логотипа "Minecraft" на главном экране (эпоха 1.21.1–1.21.5 — MatrixStack).
- *
- * Два стиля (config.logoStyle):
- *  - GROW    — родная анимация мода: логотип целиком "вырастает" с отскоком;
- *  - LETTERS — побуквенный каскад: девять букв влетают/проявляются по очереди
- *              (идея и текстуры букв — из EaseGUI, LGPLv3). В этом режиме ванильная
- *              отрисовка логотипа отменяется, буквы и edition-текст рисуем сами.
- */
+/** "Minecraft" logo animation on the title screen (1.21.1–1.21.5 era: MatrixStack). */
 @Mixin(LogoDrawer.class)
 public class LogoDrawerMixin {
-
     @Unique private boolean reanimated$pushed = false;
 
     @Unique private static Identifier[] reanimated$letters;
 
-    /** Лениво собирает Identifier'ы букв (без статического инициализатора — безопаснее для миксина). */
     @Unique
     private static Identifier[] reanimated$letters() {
         Identifier[] a = reanimated$letters;
@@ -50,23 +40,22 @@ public class LogoDrawerMixin {
         reanimated$pushed = false;
         ReAnimatedConfig c = ReAnimatedConfig.get();
         if (!c.logoEnabled) {
-            return; // мод не трогает логотип — ваниль рисует как есть
+            return;
         }
 
         if (c.logoStyle == LogoStyle.LETTERS) {
             reanimated$drawLetters(context, screenWidth, alpha, c);
-            ci.cancel(); // логотип целиком отрисован нами
+            ci.cancel();
             return;
         }
 
-        // --- Стиль GROW: логотип целиком вырастает с отскоком ---
         float elapsed = Anim.elapsed(System.currentTimeMillis());
         if (elapsed == Float.MAX_VALUE) {
             return;
         }
         float p = elapsed / Math.max(0.01f, c.logoDuration);
         if (p >= 1f) {
-            return; // анимация закончилась — без трансформаций
+            return;
         }
 
         float scaleY = c.logoEasing.apply(p);
@@ -116,7 +105,6 @@ public class LogoDrawerMixin {
                 matrices.pop();
             }
         }
-        // edition-текст ("Java Edition") — рисуем статично под логотипом
         context.setShaderColor(1f, 1f, 1f, alpha);
         context.drawTexture(LogoDrawer.EDITION_TEXTURE,
                 screenWidth / 2 - 64, boxY + LogoLetters.LOGO_HEIGHT - 7, 0f, 0f,

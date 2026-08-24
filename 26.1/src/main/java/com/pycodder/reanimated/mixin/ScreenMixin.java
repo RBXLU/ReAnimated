@@ -21,23 +21,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Анимация появления любого экрана для Minecraft 26.x (рендеринг через
- * render-state extraction) — слой ЭКРАНА (пресет):
- *  - extractRenderStateWithTooltipAndSubtitles — внешняя точка (= renderWithTooltip),
- *    оборачиваем её общим трансформом (сдвиг/масштаб по пресету) → весь экран
- *    (текст + кнопки + панель) появляется вместе;
- *  - extractBackground — фон/блюр, возвращаем встречным трансформом, чтобы он стоял.
- *
- * Покнопочный слой (профиль/Студия) кладётся ПОВЕРХ в ClickableWidgetMixin — так
- * пресет и профиль складываются, а не исключают друг друга.
- *
- * Время открытия и ранги каскада выставляются лениво при первой отрисовке;
- * ранги переназначаются при смене размера экрана (виджеты пересоздаются).
- */
+/** Base open animation for any screen on Minecraft 26.x, the SCREEN layer (preset), drawn through render-state extraction. */
 @Mixin(Screen.class)
 public abstract class ScreenMixin {
-
     @Shadow public int width;
     @Shadow public int height;
 
@@ -52,19 +38,15 @@ public abstract class ScreenMixin {
         return ((Object) this) instanceof AbstractContainerScreen;
     }
 
-    /** Раздаёт виджетам ранг сверху вниз — из него виджет считает свой шаг каскада. */
     @Unique
     private void reanimated$assignCascade() {
         Anim.cascadeCount = 1;
-        // Без ранга виджет не каскадируется вовсе — так экраны, которые мод не
-        // анимирует (чат, экраны модов в режиме "только ванильные"), остаются нетронутыми.
         if (!Anim.shouldAnimate(this)) {
             return;
         }
         Screen self = (Screen) (Object) this;
         List<AbstractWidget> widgets = new ArrayList<>();
         for (GuiEventListener e : self.children()) {
-            // Фреймы-списки мод не анимирует вовсе — они и шага в каскаде не занимают.
             if (e instanceof AbstractWidget w && w.visible && !(e instanceof AbstractContainerWidget)) {
                 widgets.add(w);
             }
@@ -82,7 +64,6 @@ public abstract class ScreenMixin {
         if (reanimated$openTime == 0L) {
             reanimated$openTime = System.currentTimeMillis();
         }
-        // Первый кадр или ресайз — виджеты пересозданы, раздаём ранги заново.
         if (this.width != reanimated$lastW || this.height != reanimated$lastH) {
             reanimated$lastW = this.width;
             reanimated$lastH = this.height;
@@ -106,7 +87,6 @@ public abstract class ScreenMixin {
         reanimated$maybeFinishClose();
     }
 
-    /** По завершении обратной анимации выполняет отложенный настоящий setScreen(null). */
     @Unique
     private void reanimated$maybeFinishClose() {
         if (!Anim.isClosing()) return;

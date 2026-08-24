@@ -19,22 +19,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Minecraft 26.x: точка отрисовки виджета — {@code extractRenderState}.
- *
- * Фреймы-списки ({@code AbstractContainerWidget}) исключены полностью — они не едут,
- * не каскадируются и не увеличиваются под курсором (см. {@link #reanimated$freezeFrame}).
- * Для остальных виджетов здесь две независимые вещи:
- *
- * 1. Покнопочный «вход» — анимация КНОПОК (профиль/Студия). Работает ПОВЕРХ
- *    анимации экрана (пресета): каждая кнопка сама смещается/масштабируется/гаснет
- *    вокруг своего пивота по своему шагу каскада.
- *
- * 2. Плавное увеличение при наведении курсора (работает в любом режиме).
- */
+/** Minecraft 26.x: the widget's draw point is {@code extractRenderState}. */
 @Mixin(AbstractWidget.class)
 public abstract class ClickableWidgetMixin implements CascadeTarget {
-
     @Shadow public abstract int getX();
     @Shadow public abstract int getY();
     @Shadow public abstract int getWidth();
@@ -71,11 +58,6 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
         return this.alpha;
     }
 
-    /**
-     * Порог видимости. Ниже него ваниль (TextRenderer.tweakTransparency) считает цвет текста
-     * "почти прозрачным" и делает надпись ПОЛНОСТЬЮ непрозрачной: рамка уже невидима, а текст
-     * вспыхивает сплошным. Поэтому настолько погасший виджет не рисуем вовсе.
-     */
     @Unique private static final float REANIMATED$MIN_ALPHA = 4f / 255f;
 
     @Unique
@@ -105,17 +87,11 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
         reanimated$applyHover(extractor);
     }
 
-    /**
-     * Фрейм-список (сервера, миры, ресурспаки, список опций) мод не анимирует вообще:
-     * его содержимое едет вместе с экраном, а обрезка и прокрутка считаются в экранных
-     * координатах и остаются на месте — фрейм разъезжается сам с собой. Экран уже сдвинут
-     * ScreenMixin'ом, поэтому здесь снимаем сдвиг обратно — ровно с этого виджета.
-     */
     @Unique
     private void reanimated$freezeFrame(GuiGraphicsExtractor extractor) {
         Minecraft client = Minecraft.getInstance();
         if (!Anim.shouldAnimate(client.screen)) {
-            return; // экран и так не анимируется — снимать нечего
+            return;
         }
         boolean container = client.screen instanceof AbstractContainerScreen;
         if (!Anim.transformActive(container)) {
@@ -142,8 +118,6 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
     @Unique
     private void reanimated$applyProfile(GuiGraphicsExtractor extractor) {
         AnimProfile p = ReAnimatedConfig.get().profile;
-        // Ранга нет у виджетов вне анимируемого экрана — например, у превью
-        // в редакторе профиля: оно рисует и анимирует себя само.
         if (!p.enabled || reanimated$rank < 0) {
             return;
         }
@@ -158,11 +132,9 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
         }
 
         if (p.identityAt(own)) {
-            return; // кнопка уже на месте — матрицу не трогаем
+            return;
         }
 
-        // Полный покнопочный «вход» ПОВЕРХ трансформации экрана (пресета): пресет
-        // двигает экран целиком, этот слой — кнопки; они складываются.
         Matrix3x2fStack m = extractor.pose();
         m.pushMatrix();
         reanimated$pushed++;
@@ -188,7 +160,7 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
         reanimated$hover = Easing.approach(reanimated$hover, target, dt, c.hoverSpeed);
 
         if (reanimated$hover < 0.001f) {
-            return; // не наведено — без накладных расходов
+            return;
         }
 
         float scale = 1f + c.hoverScale * reanimated$hover;

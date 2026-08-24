@@ -13,18 +13,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Плавное появление вкладок достижений (Minecraft 26.x — render-state extraction).
- *
- * Верхний ряд: вкладки выезжают снизу из-за верхнего края окна; пока «за окном» — обрезаются
- * scissor. Оборачиваем {@code extractTab} (фон) и {@code extractIcon} (иконку) одним сдвигом по
- * {@code getIndex()}. Тип вкладки (AdvancementTabType) недоступен, поэтому все вкладки — верхние
- * (обычный случай). Флаш не нужен: в extraction-модели scissor записывается на элемент.
- */
+/** Advancements tabs fade in (Minecraft 26.x: render-state extraction). */
 @Mixin(AdvancementTab.class)
 public abstract class AdvancementTabMixin {
-
-    /** Высота окна достижений (AdvancementsScreen.WINDOW_HEIGHT). */
     @Unique private static final int REANIMATED$WINDOW_HEIGHT = 140;
 
     @Shadow public abstract int getIndex();
@@ -53,7 +44,7 @@ public abstract class AdvancementTabMixin {
         float dy = (1f - eased) * p.offsetY;
 
         int sw = context.guiWidth();
-        int winY = (context.guiHeight() - REANIMATED$WINDOW_HEIGHT) / 2; // окно центрировано
+        int winY = (context.guiHeight() - REANIMATED$WINDOW_HEIGHT) / 2;
         context.enableScissor(0, 0, sw, winY);
         Matrix3x2fStack m = context.pose();
         m.pushMatrix();

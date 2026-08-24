@@ -15,20 +15,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Плавное появление вкладок креативного инвентаря: вкладки выезжают из-за плашки по очереди.
- *
- * По ряду задаётся направление: верхние вкладки выезжают СНИЗУ (из-за верхнего края панели
- * вверх), нижние — СВЕРХУ (из-за нижнего края вниз). Пока вкладка «за плашкой», она обрезается
- * (scissor по краю панели) — иконки/фон не видны, пока не выедут. Порядок каскада — по столбцу.
- *
- * Эпоха 1.21.1–1.21.3 (NeoForge / Mojmap): 3D PoseStack, scissor кладётся по видимой панели
- * благодаря {@code DrawContextScissorMixin}. Идея — из EaseGUI (Weyne1, LGPLv3), переписано
- * под системы ReAnimated.
- */
+/** Creative inventory tabs fade in: tabs slide out from behind the panel one by one. */
 @Mixin(CreativeModeInventoryScreen.class)
 public class CreativeInventoryScreenMixin {
-
     @Unique private boolean reanimated$pushed = false;
 
     @Inject(method = "renderTabButton(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/world/item/CreativeModeTab;)V", at = @At("HEAD"))
@@ -52,11 +41,10 @@ public class CreativeInventoryScreenMixin {
         float elapsedMs = e * 1000f;
         float eased = p.progress(elapsedMs, group.column());
         if (p.identityAt(eased)) {
-            return; // вкладка на месте
+            return;
         }
 
         boolean top = group.row() == CreativeModeTab.Row.TOP;
-        // Верхние выезжают снизу (+, всплывают), нижние — сверху (−, опускаются).
         float dy = (1f - eased) * p.offsetY;
         if (!top) dy = -dy;
 
@@ -65,10 +53,7 @@ public class CreativeInventoryScreenMixin {
         int sh = mc.getWindow().getGuiScaledHeight();
 
         PanelBounds panel = (PanelBounds) (Object) this;
-        // Флашим уже накопленную сетку предметов ДО обрезки, иначе она попала бы под scissor.
         graphics.flush();
-        // Обрезка «за плашкой»: показываем вкладку только вне прямоугольника панели.
-        // enableScissor мапится матрицей (DrawContextScissorMixin) → ляжет по видимой панели.
         if (top) {
             graphics.enableScissor(0, 0, sw, panel.reanimated$panelTop());
         } else {
@@ -83,7 +68,7 @@ public class CreativeInventoryScreenMixin {
     @Inject(method = "renderTabButton(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/world/item/CreativeModeTab;)V", at = @At("RETURN"))
     private void reanimated$iconTail(GuiGraphics graphics, CreativeModeTab group, CallbackInfo ci) {
         if (reanimated$pushed) {
-            graphics.flush(); // отрисовать вкладку (обрезанную) под scissor
+            graphics.flush();
             graphics.pose().popPose();
             com.pycodder.reanimated.anim.OwnTransform.pop();
             graphics.disableScissor();

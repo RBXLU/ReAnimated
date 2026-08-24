@@ -1,6 +1,6 @@
 package com.pycodder.reanimated.anim;
 
-/** Тип траектории (кривой сглаживания) анимации — выбирается в настройках. */
+/** Animation trajectory (easing curve), chosen in the settings. */
 public enum EasingType {
     LINEAR("Linear"),
     OUT_CUBIC("Out Cubic"),

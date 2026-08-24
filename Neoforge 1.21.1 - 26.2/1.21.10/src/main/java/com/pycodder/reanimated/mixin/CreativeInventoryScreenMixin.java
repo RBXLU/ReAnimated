@@ -15,20 +15,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Плавное появление вкладок креативного инвентаря: вкладки выезжают из-за плашки по очереди.
- *
- * По ряду задаётся направление: верхние вкладки выезжают СНИЗУ (из-за верхнего края панели
- * вверх), нижние — СВЕРХУ (из-за нижнего края вниз). Пока вкладка «за плашкой», она обрезается
- * (scissor по краю панели) — иконки/фон не видны, пока не выедут. Порядок каскада — по столбцу.
- *
- * Эпоха 1.21.6+ (NeoForge / Mojmap): 2D Matrix3x2fStack, scissor ваниль преобразует текущей
- * матрицей сама. Идея — из EaseGUI (Weyne1, LGPLv3), переписано
- * под системы ReAnimated.
- */
+/** Creative inventory tabs fade in: tabs slide out from behind the panel one by one. */
 @Mixin(CreativeModeInventoryScreen.class)
 public class CreativeInventoryScreenMixin {
-
     @Unique private boolean reanimated$pushed = false;
 
     @Inject(method = "renderTabButton(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/world/item/CreativeModeTab;)V", at = @At("HEAD"))
@@ -52,11 +41,10 @@ public class CreativeInventoryScreenMixin {
         float elapsedMs = e * 1000f;
         float eased = p.progress(elapsedMs, group.column());
         if (p.identityAt(eased)) {
-            return; // вкладка на месте
+            return;
         }
 
         boolean top = group.row() == CreativeModeTab.Row.TOP;
-        // Верхние выезжают снизу (+, всплывают), нижние — сверху (−, опускаются).
         float dy = (1f - eased) * p.offsetY;
         if (!top) dy = -dy;
 
@@ -65,8 +53,6 @@ public class CreativeInventoryScreenMixin {
         int sh = mc.getWindow().getGuiScaledHeight();
 
         PanelBounds panel = (PanelBounds) (Object) this;
-        // Обрезка «за плашкой»: показываем вкладку только вне прямоугольника панели.
-        // enableScissor ваниль сама мапит текущей матрицей → ляжет по видимой панели.
         if (top) {
             graphics.enableScissor(0, 0, sw, panel.reanimated$panelTop());
         } else {
