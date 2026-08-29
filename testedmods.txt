@@ -28,3 +28,19 @@ Mahou Tsukai
 Security Craft
 Oculus
 Waystones
+
+--- Compatibility notes ---
+
+Smooth Scrolling / SmoothScroll / Smooth Scrolling Refurbished
+    Items disappeared while scrolling the creative inventory on Minecraft 1.21.1-1.21.3.
+    Fixed in 1.6: ReAnimated now shifts the clipping rectangle by its own animation only,
+    instead of by whatever is currently in the drawing matrix.
+
+Rechiseled (+ SuperMartijn642's Core Lib)
+    The block list rendered empty. Same cause, fixed in 1.4.1 / 1.4.3.
+
+Mods that draw a GUI in their own coordinate system are the risky ones in general: they set
+clipping in local coordinates and expect the vanilla behaviour of the version they target.
+If something in a modded GUI disappears while ReAnimated is installed, report the Minecraft
+version and the mod - and as a workaround, General -> "Animate everything / Vanilla only"
+limits the mod to vanilla screens, and "Animate lists" turns off list animation separately.

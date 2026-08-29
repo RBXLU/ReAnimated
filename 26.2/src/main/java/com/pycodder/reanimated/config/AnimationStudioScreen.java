@@ -303,17 +303,19 @@ public class AnimationStudioScreen extends Screen {
             Component.translatable("reanimated.studio.tools"), listX + listW / 2, 28, 0xFFAAAAAA);
 
         context.fill(listX - 6, listTop - 4, listX + listW + 6, listBottom + 4, 0xB0000000);
-        context.enableScissor(listX - 6, listTop, listX + listW + 6, listBottom);
-        for (Item item : items) {
-            if (item.header != null) {
-                if (item.y + HEADER_H > listTop && item.y < listBottom) {
-                    context.text(font, item.header, listX, item.y + 3, 0xFFFFCC66);
+        if (listBottom > listTop) {
+            context.enableScissor(listX - 6, listTop, listX + listW + 6, listBottom);
+            for (Item item : items) {
+                if (item.header != null) {
+                    if (item.y + HEADER_H > listTop && item.y < listBottom) {
+                        context.text(font, item.header, listX, item.y + 3, 0xFFFFCC66);
+                    }
+                } else if (item.widget.visible) {
+                    item.widget.extractRenderState(context, mouseX, mouseY, delta);
                 }
-            } else if (item.widget.visible) {
-                item.widget.extractRenderState(context, mouseX, mouseY, delta);
             }
+            context.disableScissor();
         }
-        context.disableScissor();
         renderScrollbar(context);
 
         renderGraph(context);
@@ -407,6 +409,9 @@ public class AnimationStudioScreen extends Screen {
 
         int innerTop = top + 16;
         int innerBottom = bottom - 6;
+        if (innerBottom <= innerTop || rightW <= 0) {
+            return;
+        }
         int band = Math.max(1, innerBottom - innerTop);
         int step = band / PREVIEW_ELEMENTS;
         int panelW = Math.min(rightW - 16, 108);

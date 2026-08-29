@@ -29,6 +29,15 @@ public final class Easing {
         return 1f + c3 * f * f * f + c1 * f * f;
     }
 
+    public static float press(float t) {
+        t = clamp01(t);
+        final float down = 0.25f;
+        if (t < down) {
+            return outCubic(t / down);
+        }
+        return 1f - outBack((t - down) / (1f - down));
+    }
+
     public static float approach(float current, float target, float dtSeconds, float speed) {
         float rate = 1f - (float) Math.exp(-speed * dtSeconds);
         if (rate < 0f) rate = 0f;

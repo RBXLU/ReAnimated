@@ -61,7 +61,7 @@ public class CreativeInventoryScreenMixin {
         }
         MatrixStack m = context.getMatrices();
         m.push();
-        m.translate(0f, dy, 0f);
+        com.pycodder.reanimated.anim.UiTransform.translate(m, 0f, dy);
         reanimated$pushed = true;
     }
 
@@ -70,6 +70,7 @@ public class CreativeInventoryScreenMixin {
         if (reanimated$pushed) {
             context.draw();
             context.getMatrices().pop();
+            com.pycodder.reanimated.anim.OwnTransform.pop();
             context.disableScissor();
             reanimated$pushed = false;
         }

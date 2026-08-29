@@ -38,9 +38,40 @@ public class ReAnimatedConfig {
     public float containerDistance = 30f;
     public EasingType containerEasing = EasingType.OUT_BACK;
 
+    public boolean bgFadeEnabled = true;
+
+    public boolean listsEnabled = true;
+    public AnimProfile profileLists = defaultListsProfile();
+
+    private static AnimProfile defaultListsProfile() {
+        AnimProfile p = new AnimProfile();
+        p.enabled = true;
+        p.durationMs = 260;
+        p.offsetX = 0f;
+        p.offsetY = 14f;
+        p.scaleX = 1f;
+        p.scaleY = 1f;
+        p.initialAlpha = 1f;
+        p.cascadeDelayMs = 28;
+        p.cascadeOrder = com.pycodder.reanimated.anim.CascadeOrder.TOP_TO_BOTTOM;
+        p.pivot = com.pycodder.reanimated.anim.PivotPoint.CENTER;
+        p.easing = EasingType.OUT_CUBIC;
+        return p;
+    }
+
+    public boolean pauseEnabled = true;
+    public int pauseSpeedTicks = 4;
+    public UiPreset pausePreset = UiPreset.INHERIT;
+    public float pauseDistance = 12f;
+    public EasingType pauseEasing = EasingType.OUT_CUBIC;
+
     public boolean hoverEnabled = true;
     public float hoverScale = 0.07f;
     public float hoverSpeed = 14f;
+
+    public boolean pressEnabled = true;
+    public float pressScale = 0.06f;
+    public float pressDuration = 0.18f;
 
     public boolean slotHighlightEnabled = true;
     public float slotHighlightSpeed = 22f;
@@ -71,6 +102,7 @@ public class ReAnimatedConfig {
     }
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final Gson SHARE_GSON = new Gson();
     private static ReAnimatedConfig INSTANCE;
 
     public static ReAnimatedConfig get() {
@@ -90,13 +122,7 @@ public class ReAnimatedConfig {
             try (Reader r = Files.newBufferedReader(p)) {
                 ReAnimatedConfig cfg = GSON.fromJson(r, ReAnimatedConfig.class);
                 if (cfg != null) {
-                    if (cfg.profile == null) cfg.profile = new AnimProfile();
-                    cfg.profile.sanitize();
-                    if (cfg.profileLogo == null) cfg.profileLogo = LogoLetters.defaultProfile();
-                    cfg.profileLogo.sanitize();
-                    if (cfg.logoStyle == null) cfg.logoStyle = LogoStyle.GROW;
-                    if (cfg.profileTabs == null) cfg.profileTabs = defaultTabsProfile();
-                    cfg.profileTabs.sanitize();
+                    cfg.sanitize();
                     return cfg;
                 }
             } catch (Exception e) {
@@ -118,5 +144,51 @@ public class ReAnimatedConfig {
         } catch (IOException e) {
             ReAnimatedClient.LOGGER.warn("[ReAnimated] Failed to save config", e);
         }
+    }
+
+    private void sanitize() {
+        if (profile == null) profile = new AnimProfile();
+        profile.sanitize();
+        if (profileLogo == null) profileLogo = LogoLetters.defaultProfile();
+        profileLogo.sanitize();
+        if (profileTabs == null) profileTabs = defaultTabsProfile();
+        profileTabs.sanitize();
+        if (profileLists == null) profileLists = defaultListsProfile();
+        profileLists.sanitize();
+        if (logoStyle == null) logoStyle = LogoStyle.GROW;
+        if (uiPreset == null) uiPreset = UiPreset.DEFAULT;
+        if (screenOpenEasing == null) screenOpenEasing = EasingType.OUT_CUBIC;
+        if (containerEasing == null) containerEasing = EasingType.OUT_BACK;
+        if (logoEasing == null) logoEasing = EasingType.OUT_BACK;
+        if (pausePreset == null) pausePreset = UiPreset.INHERIT;
+        if (pauseEasing == null) pauseEasing = EasingType.OUT_CUBIC;
+        if (uiPreset == UiPreset.INHERIT) uiPreset = UiPreset.DEFAULT;
+    }
+
+    public String toShareString() {
+        return SHARE_GSON.toJson(this);
+    }
+
+    public static boolean applyShareString(String text) {
+        if (text == null || text.isBlank()) return false;
+        ReAnimatedConfig parsed;
+        try {
+            parsed = GSON.fromJson(text.trim(), ReAnimatedConfig.class);
+        } catch (Exception e) {
+            return false;
+        }
+        if (parsed == null) return false;
+        parsed.sanitize();
+
+        ReAnimatedConfig target = get();
+        for (java.lang.reflect.Field f : ReAnimatedConfig.class.getDeclaredFields()) {
+            if (java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
+            try {
+                f.set(target, f.get(parsed));
+            } catch (IllegalAccessException ignored) {
+            }
+        }
+        target.save();
+        return true;
     }
 }

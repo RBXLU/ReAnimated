@@ -24,7 +24,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /** Base open animation for any screen. */
-@Mixin(Screen.class)
+@Mixin(value = Screen.class, priority = 1500)
 public abstract class ScreenMixin {
     @Shadow public int width;
     @Shadow public int height;
@@ -32,6 +32,7 @@ public abstract class ScreenMixin {
     @Unique private long reanimated$openTime = 0L;
     @Unique private boolean reanimated$fwdPushed = false;
     @Unique private boolean reanimated$bgPushed = false;
+    @Unique private int reanimated$pauseFlag = -1;
 
     @Inject(method = "init(Lnet/minecraft/client/MinecraftClient;II)V", at = @At("TAIL"))
     private void reanimated$onInit(MinecraftClient client, int width, int height, CallbackInfo ci) {
@@ -65,9 +66,18 @@ public abstract class ScreenMixin {
         return ((Object) this) instanceof HandledScreen;
     }
 
+    @Unique
+    private boolean reanimated$isPause() {
+        if (reanimated$pauseFlag < 0) {
+            reanimated$pauseFlag = Anim.isPauseScreen(this) ? 1 : 0;
+        }
+        return reanimated$pauseFlag == 1;
+    }
+
     @Inject(method = "renderWithTooltip", at = @At("HEAD"))
     private void reanimated$wrapHead(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         Anim.currentOpenTime = reanimated$openTime;
+        Anim.currentIsPause = reanimated$isPause();
         boolean container = reanimated$isContainer();
         reanimated$fwdPushed = Anim.transformActive(container) && Anim.shouldAnimate(this);
         if (reanimated$fwdPushed) {
@@ -110,5 +120,26 @@ public abstract class ScreenMixin {
         if (reanimated$bgPushed) {
             context.getMatrices().pop();
         }
+    }
+
+    @Unique private static final int REANIMATED$DIM_TOP = 0xC0101010;
+    @Unique private static final int REANIMATED$DIM_BOTTOM = 0xD0101010;
+
+    @Inject(method = "renderInGameBackground", at = @At("HEAD"), cancellable = true)
+    private void reanimated$dimFade(DrawContext context, CallbackInfo ci) {
+        if (!Anim.shouldAnimate(this)) return;
+        float k = Anim.backgroundFade(reanimated$isContainer());
+        if (k >= 1f) return;
+
+        ci.cancel();
+        if (k <= 0.004f) return;
+        context.fillGradient(0, 0, this.width, this.height,
+            reanimated$dim(REANIMATED$DIM_TOP, k), reanimated$dim(REANIMATED$DIM_BOTTOM, k));
+    }
+
+    @Unique
+    private static int reanimated$dim(int argb, float k) {
+        int a = Math.round(((argb >>> 24) & 0xFF) * k);
+        return (a << 24) | (argb & 0x00FFFFFF);
     }
 }

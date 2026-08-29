@@ -57,7 +57,7 @@ public abstract class AdvancementTabMixin {
         context.enableScissor(0, 0, sw, winY);
         MatrixStack m = context.getMatrices();
         m.push();
-        m.translate(0f, dy, 0f);
+        com.pycodder.reanimated.anim.UiTransform.translate(m, 0f, dy);
         reanimated$pushed = true;
     }
 
@@ -66,6 +66,7 @@ public abstract class AdvancementTabMixin {
         if (reanimated$pushed) {
             context.draw();
             context.getMatrices().pop();
+            com.pycodder.reanimated.anim.OwnTransform.pop();
             context.disableScissor();
             reanimated$pushed = false;
         }

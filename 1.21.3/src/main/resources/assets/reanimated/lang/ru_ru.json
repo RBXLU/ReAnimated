@@ -1,10 +1,10 @@
 {
   "reanimated.config.title": "ReAnimated — Настройки",
   "reanimated.config.open": "Настройки ReAnimated",
-
   "reanimated.section.general": "— Общее —",
   "reanimated.section.menu": "— Экраны меню —",
   "reanimated.section.containers": "— Контейнеры —",
+  "reanimated.section.pause": "— Меню паузы —",
   "reanimated.section.cursor": "— Курсор —",
   "reanimated.section.logo": "— Логотип —",
   "reanimated.section.tabs": "— Вкладки —",
@@ -14,10 +14,15 @@
   "reanimated.opt.animate_scope.all": "Весь интерфейс",
   "reanimated.opt.animate_scope.vanilla": "Только ванильные (без модов)",
   "reanimated.opt.close_enabled": "Анимация закрытия",
+  "reanimated.opt.bg_fade": "Плавное затемнение фона",
   "reanimated.opt.tested_mods": "Протестированные моды",
   "reanimated.opt.profile_editor": "Редактор профиля...",
   "reanimated.opt.studio": "Студия анимаций...",
-
+  "reanimated.opt.export": "Копировать",
+  "reanimated.opt.import": "Вставить",
+  "reanimated.opt.export.done": "Настройки скопированы в буфер обмена",
+  "reanimated.opt.import.done": "Настройки применены из буфера обмена",
+  "reanimated.opt.import.failed": "В буфере обмена нет настроек ReAnimated",
   "reanimated.studio.title": "Студия анимаций",
   "reanimated.studio.tools": "Инструменты",
   "reanimated.studio.section_params": "— Параметры —",
@@ -49,7 +54,6 @@
   "reanimated.studio.preset.reset": "Сбросить по умолчанию",
   "reanimated.studio.save": "Сохранить",
   "reanimated.studio.cancel": "Отмена",
-
   "reanimated.editor.title": "Редактор профиля анимации",
   "reanimated.editor.params": "Параметры профиля",
   "reanimated.editor.preview": "Превью анимации",
@@ -68,24 +72,27 @@
   "reanimated.editor.reset": "Сбросить по умолчанию",
   "reanimated.editor.save": "Сохранить",
   "reanimated.editor.cancel": "Отмена",
-
   "reanimated.opt.screen_enabled": "Анимация открытия меню",
   "reanimated.opt.screen_duration": "Меню — длительность",
   "reanimated.opt.screen_distance": "Меню — дистанция выезда",
   "reanimated.opt.screen_easing": "Меню — траектория",
-
   "reanimated.opt.container_enabled": "Анимация контейнеров",
   "reanimated.opt.container_duration": "Контейнеры — длительность",
   "reanimated.opt.container_distance": "Контейнеры — дистанция выезда",
   "reanimated.opt.container_easing": "Контейнеры — траектория",
-
+  "reanimated.opt.pause_enabled": "Анимация меню паузы",
+  "reanimated.opt.pause_preset": "Меню паузы — пресет",
+  "reanimated.opt.pause_speed_ticks": "Меню паузы — скорость (тики)",
+  "reanimated.opt.pause_distance": "Меню паузы — дистанция выезда",
+  "reanimated.opt.pause_easing": "Меню паузы — траектория",
   "reanimated.opt.hover_enabled": "Увеличение кнопок при наведении",
   "reanimated.opt.hover_scale": "Наведение — величина увеличения",
   "reanimated.opt.hover_speed": "Наведение — скорость",
-
+  "reanimated.opt.press_enabled": "Анимация нажатия кнопок",
+  "reanimated.opt.press_scale": "Нажатие — глубина",
+  "reanimated.opt.press_duration": "Нажатие — длительность",
   "reanimated.opt.slot_enabled": "Следящая подсветка слота",
   "reanimated.opt.slot_speed": "Подсветка слота — скорость",
-
   "reanimated.opt.logo_enabled": "Анимация логотипа",
   "reanimated.opt.logo_style": "Логотип — стиль",
   "reanimated.opt.logo_duration": "Рост логотипа — длительность",
@@ -99,5 +106,16 @@
   "reanimated.opt.tabs_duration": "Вкладки — длительность",
   "reanimated.opt.tabs_delay": "Вкладки — задержка каскада",
   "reanimated.opt.tabs_offset": "Вкладки — сдвиг Y",
-  "reanimated.opt.tabs_easing": "Вкладки — траектория"
+  "reanimated.opt.tabs_easing": "Вкладки — траектория",
+  "reanimated.opt.lists_enabled": "Анимация списков",
+  "reanimated.section.tools": "— Инструменты —",
+  "reanimated.tab.general": "Общее",
+  "reanimated.tab.menu": "Меню",
+  "reanimated.tab.pause": "Пауза",
+  "reanimated.tab.containers": "Контейнеры",
+  "reanimated.tab.cursor": "Курсор",
+  "reanimated.tab.logo": "Логотип",
+  "reanimated.tab.tabs": "Вкладки",
+  "reanimated.group.tools": "Инструменты",
+  "reanimated.group.letters": "Побуквенный каскад"
 }

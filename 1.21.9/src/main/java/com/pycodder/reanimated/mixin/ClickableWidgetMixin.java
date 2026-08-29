@@ -18,8 +18,9 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/** List frames ({@code ContainerWidget}) are excluded here entirely: they neither move, nor cascade, nor scale on hover. */
+/** List frames ({@code ContainerWidget}) are neither scaled on hover nor cascaded per button here: they have their own per-row cascade. */
 @Mixin(ClickableWidget.class)
 public abstract class ClickableWidgetMixin implements CascadeTarget {
     @Shadow public abstract int getX();
@@ -31,6 +32,7 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
 
     @Unique private float reanimated$hover = 0f;
     @Unique private long reanimated$lastTime = 0L;
+    @Unique private long reanimated$pressTime = 0L;
     @Unique private int reanimated$pushed = 0;
     @Unique private float reanimated$savedAlpha = -1f;
 
@@ -84,11 +86,37 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
         }
 
         reanimated$applyProfile(context);
+        if (reanimated$isTextField()) {
+            return;
+        }
         reanimated$applyHover(context);
+        reanimated$applyPress(context);
+    }
+
+    @Unique
+    private boolean reanimated$isTextField() {
+        return (Object) this instanceof net.minecraft.client.gui.widget.TextFieldWidget;
+    }
+
+    @Inject(method = "playDownSound", at = @At("HEAD"))
+    private void reanimated$onDown(net.minecraft.client.sound.SoundManager soundManager, CallbackInfo ci) {
+        if (ReAnimatedConfig.get().pressEnabled) {
+            reanimated$pressTime = System.currentTimeMillis();
+        }
+    }
+
+    @Inject(method = "mouseClicked", at = @At("RETURN"))
+    private void reanimated$onMouseDown(net.minecraft.client.gui.Click click, boolean doubled, CallbackInfoReturnable<Boolean> cir) {
+        if (Boolean.TRUE.equals(cir.getReturnValue()) && ReAnimatedConfig.get().pressEnabled) {
+            reanimated$pressTime = System.currentTimeMillis();
+        }
     }
 
     @Unique
     private void reanimated$freezeFrame(DrawContext context) {
+        if (ReAnimatedConfig.get().listsEnabled) {
+            return;
+        }
         MinecraftClient client = MinecraftClient.getInstance();
         if (!Anim.shouldAnimate(client.currentScreen)) {
             return;
@@ -165,6 +193,26 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
         }
 
         float scale = 1f + c.hoverScale * reanimated$hover;
+        Matrix3x2fStack matrices = context.getMatrices();
+        matrices.pushMatrix();
+        reanimated$pushed++;
+        UiTransform.pivotScale(matrices, getX() + getWidth() / 2f, getY() + getHeight() / 2f, scale, scale);
+    }
+
+    @Unique
+    private void reanimated$applyPress(DrawContext context) {
+        if (reanimated$pressTime == 0L) {
+            return;
+        }
+        ReAnimatedConfig c = ReAnimatedConfig.get();
+        float durationMs = Math.max(0.01f, c.pressDuration) * 1000f;
+        float t = (System.currentTimeMillis() - reanimated$pressTime) / durationMs;
+        if (t >= 1f || !c.pressEnabled) {
+            reanimated$pressTime = 0L;
+            return;
+        }
+
+        float scale = 1f - c.pressScale * Easing.press(t);
         Matrix3x2fStack matrices = context.getMatrices();
         matrices.pushMatrix();
         reanimated$pushed++;

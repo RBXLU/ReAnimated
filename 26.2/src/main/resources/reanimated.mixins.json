@@ -4,12 +4,14 @@
   "client": [
     "ScreenMixin",
     "ClickableWidgetMixin",
-    "DrawContextScissorMixin",
+    "AbstractSelectionListMixin",
     "HandledScreenMixin",
     "LogoDrawerMixin",
+    "ScissorClampMixin",
     "AdvancementTabMixin",
     "CreativeInventoryScreenMixin",
-    "MinecraftClientMixin"
+    "MinecraftClientMixin",
+    "GuiGraphicsEntityMixin"
   ],
   "injectors": {
     "defaultRequire": 1

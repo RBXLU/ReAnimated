@@ -18,6 +18,10 @@ repositories {
         // резолвим ModMenu по артефакту, чтобы сборка не падала из-за флапающего .pom.
         metadataSources { artifact() }
     }
+    maven {
+        url = 'https://api.modrinth.com/maven'
+        content { includeGroup 'maven.modrinth' }
+    }
     mavenCentral()
 }
 
@@ -30,6 +34,8 @@ dependencies {
     // ModMenu — только для компиляции интеграции; не тащим в jar, не делаем зависимостью.
     // 26.x уже деобфусцирован, поэтому обычный compileOnly (без remap).
     compileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
+    // Sodium — только для компиляции страницы настроек внутри его экрана.
+    compileOnly "maven.modrinth:sodium:${project.sodium_version}"
 }
 
 processResources {

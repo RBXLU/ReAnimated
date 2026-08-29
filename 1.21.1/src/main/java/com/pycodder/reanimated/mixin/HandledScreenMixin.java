@@ -61,6 +61,7 @@ public abstract class HandledScreenMixin implements com.pycodder.reanimated.anim
     private void reanimated$blurPop(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if (reanimated$blurPushed) {
             context.getMatrices().pop();
+            com.pycodder.reanimated.anim.OwnTransform.pop();
         }
     }
 

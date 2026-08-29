@@ -22,6 +22,9 @@ Open a menu — the main menu, your inventory, a chest, a furnace, doesn't matte
 - **Tabs slide out** — the category tabs in **Advancements** and the **Creative** inventory slide out from behind the panel, one after another: top tabs rise from below, bottom tabs drop from above.
 - **Following slot highlight** — the inventory slot highlight glides after your cursor instead of snapping between slots.
 - **Button hover scaling** — buttons gently grow when hovered and ease back when you move away.
+- **Buttons press in** — clicking a button (or pressing Enter on it) dips it inward and springs it back.
+- **Background dimming fades in** — the dim behind a screen builds up along with the panel instead of snapping on.
+- **Lists animate too** — the mod list in Mod Menu, servers, worlds and resource packs travel with the screen, and their rows arrive one after another.
 
 ### Presets & your own animations
 Every screen animates through a preset you choose:
@@ -35,10 +38,15 @@ Want something specific? Open the **Animation Studio** or the **Profile Editor**
 
 ## ⚙️ Configuration
 
-Open **Options → Video Settings → `ReAnimated settings`**, or through **Mod Menu** if you have it. (Using Sodium / VulkanMod / Iris? The button shows up in their settings screen too.)
+Open **Options → Video Settings → `ReAnimated settings`**, or through **Mod Menu** if you have it.
 
-The settings are grouped into sections — **General · Menu screens · Containers · Cursor · Logo · Tabs** — and every animation can be tuned independently:
+**Running Sodium 0.8+?** ReAnimated gets its own entry inside Sodium's settings screen — real pages in the list on the left, drawn with Sodium's own controls and covered by its search. On older Sodium, VulkanMod or Iris a button appears in their screen instead.
 
+The settings are grouped into sections — **General · Menu screens · Pause menu · Containers · Cursor · Logo · Tabs** — and every animation can be tuned independently:
+
+- **The pause menu has its own settings** — speed, distance, trajectory and preset, separate from other menus
+- **Export / Import** — copy your whole configuration to the clipboard and paste it into another instance, or share it
+- **Animate lists** — row-by-row appearance for the mod list, servers, worlds and resource packs (can be switched off)
 - **Enable / disable** each animation
 - **Duration** (how fast) and **slide distance / depth**
 - **Trajectory / easing** — *Linear*, *Out Cubic*, *Out Back (bounce)*, *Out Expo* and more
@@ -57,11 +65,9 @@ Client-side only — not required on servers, and players without it won't notic
 ### Supported versions
 There's a separate download for each Minecraft version. The GUI rendering changed a fair amount across 1.21.x and again in 26.x, so every version has its own build made against it — grab the one that matches your game exactly.
 
-**NeoForge:** builds exist, but they currently sit at **1.2.1** — the Fabric line is further ahead, so the logo cascade, the tab animation and the sectioned settings aren't in the NeoForge files yet.
+**NeoForge:** builds are kept level with the Fabric line — same version number, same features.
 
-> Each file is pinned to one Minecraft version — pick the one that matches your game. The mod version looks like `<Minecraft version>+<mod version>`, e.g. `1.21.1+1.4.0`.
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/N1N7225QLU)
+> Each file is pinned to one Minecraft version — pick the one that matches your game. The mod version looks like `<Minecraft version>+<mod version>`, e.g. `1.21.1+1.6`.
 
 ---
 
@@ -83,6 +89,9 @@ Made with ❤️ by **[@pycodder](https://modrinth.com/user/pycodder)**
 - **Анимация логотипа, два стиля** — логотип *Minecraft* либо **вырастает** с мягким отскоком, либо собирается **по буквам** каскадом. Выбираешь сам.
 - **Вкладки выезжают** — вкладки категорий в **достижениях** и **креативном** инвентаре выезжают из-за панели по очереди: верхние поднимаются снизу, нижние опускаются сверху.
 - **Подсветка слота** плавно следует за курсором по инвентарю.
+- **Кнопки вдавливаются** — нажатие мышью или Enter'ом проседает кнопку и упруго возвращает её.
+- **Затемнение фона появляется плавно** — вместе с панелью, а не мгновенно.
+- **Списки тоже анимируются** — список модов в Mod Menu, сервера, миры и ресурспаки едут вместе с экраном, строки появляются по очереди.
 - **Увеличение кнопок при наведении** — кнопки мягко растут под курсором и возвращаются обратно.
 
 ### Пресеты и свои анимации
@@ -97,15 +106,19 @@ Made with ❤️ by **[@pycodder](https://modrinth.com/user/pycodder)**
 
 ### Настройки
 
-Настройки → Настройки графики → «Настройки ReAnimated», или через **Mod Menu**. (Sodium / VulkanMod / Iris? Кнопка появится и в их настройках.) Настройки разбиты на секции — **Общее · Экраны меню · Контейнеры · Курсор · Логотип · Вкладки** — у каждой анимации свой переключатель, ползунки длительности, дистанции/глубины и траектории. Всё сохраняется в `config/reanimated.json` и применяется сразу.
+Настройки → Настройки графики → «Настройки ReAnimated», или через **Mod Menu**.
+
+**Стоит Sodium 0.8+?** ReAnimated появится отдельным пунктом внутри экрана Sodium — своими страницами в списке слева, его же элементами управления и с его поиском. На старом Sodium, VulkanMod или Iris вместо этого добавляется кнопка в их экран. Настройки разбиты на секции — **Общее · Экраны меню · Меню паузы · Контейнеры · Курсор · Логотип · Вкладки** — у каждой анимации свой переключатель, ползунки длительности, дистанции/глубины и траектории. У меню паузы свой набор настроек (скорость, дистанция, траектория, пресет), а кнопки **Копировать/Вставить** переносят всю конфигурацию через буфер обмена. Всё сохраняется в `config/reanimated.json` и применяется сразу.
 
 ### Поддержка
 
 Fabric / Quilt + Fabric API, Minecraft **1.21.1 – 1.21.11**, а также сборки **26.1 / 26.2**. Для каждой версии — отдельная сборка (рендеринг интерфейса заметно менялся между версиями), бери ровно под свою игру.
 
-**NeoForge:** сборки есть, но пока на версии **1.2.1** — Fabric-линейка ушла вперёд, так что каскада логотипа, анимации вкладок и секций в настройках в NeoForge-файлах ещё нет.
+**NeoForge:** возможности те же, но нумерация отстаёт на релиз: версия 1.5.0 для NeoForge не выходила, поэтому Fabric **1.6** соответствует NeoForge **1.5**.
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/N1N7225QLU)
+### Благодарности
+
+**Побуквенный каскад логотипа** (идея + текстуры букв) и идея **каскада вкладок** — из мода [**EaseGUI**](https://github.com/Weyne1/EaseGUI) (Weyne1), под лицензией **LGPL-3.0**. Полная атрибуция — в [`CREDITS.md`](CREDITS.md) и папке [`licenses/`](licenses/).
 
 </details>
 =======

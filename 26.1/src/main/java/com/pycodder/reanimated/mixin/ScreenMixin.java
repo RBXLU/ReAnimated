@@ -22,7 +22,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /** Base open animation for any screen on Minecraft 26.x, the SCREEN layer (preset), drawn through render-state extraction. */
-@Mixin(Screen.class)
+@Mixin(value = Screen.class, priority = 1500)
 public abstract class ScreenMixin {
     @Shadow public int width;
     @Shadow public int height;
@@ -33,9 +33,19 @@ public abstract class ScreenMixin {
     @Unique private int reanimated$lastW = -1;
     @Unique private int reanimated$lastH = -1;
 
+    @Unique private int reanimated$pauseFlag = -1;
+
     @Unique
     private boolean reanimated$isContainer() {
         return ((Object) this) instanceof AbstractContainerScreen;
+    }
+
+    @Unique
+    private boolean reanimated$isPause() {
+        if (reanimated$pauseFlag < 0) {
+            reanimated$pauseFlag = Anim.isPauseScreen(this) ? 1 : 0;
+        }
+        return reanimated$pauseFlag == 1;
     }
 
     @Unique
@@ -70,6 +80,7 @@ public abstract class ScreenMixin {
             reanimated$assignCascade();
         }
         Anim.currentOpenTime = reanimated$openTime;
+        Anim.currentIsPause = reanimated$isPause();
         boolean container = reanimated$isContainer();
         reanimated$fwdPushed = Anim.transformActive(container) && Anim.shouldAnimate(this);
         if (reanimated$fwdPushed) {
@@ -113,5 +124,26 @@ public abstract class ScreenMixin {
         if (reanimated$bgPushed) {
             extractor.pose().popMatrix();
         }
+    }
+
+    @Unique private static final int REANIMATED$DIM_TOP = 0xC0101010;
+    @Unique private static final int REANIMATED$DIM_BOTTOM = 0xD0101010;
+
+    @Inject(method = "extractTransparentBackground", at = @At("HEAD"), cancellable = true)
+    private void reanimated$dimFade(GuiGraphicsExtractor extractor, CallbackInfo ci) {
+        if (!Anim.shouldAnimate(this)) return;
+        float k = Anim.backgroundFade(reanimated$isContainer());
+        if (k >= 1f) return;
+
+        ci.cancel();
+        if (k <= 0.004f) return;
+        extractor.fillGradient(0, 0, this.width, this.height,
+            reanimated$dim(REANIMATED$DIM_TOP, k), reanimated$dim(REANIMATED$DIM_BOTTOM, k));
+    }
+
+    @Unique
+    private static int reanimated$dim(int argb, float k) {
+        int a = Math.round(((argb >>> 24) & 0xFF) * k);
+        return (a << 24) | (argb & 0x00FFFFFF);
     }
 }

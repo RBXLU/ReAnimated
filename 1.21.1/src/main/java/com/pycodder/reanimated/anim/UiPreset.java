@@ -5,7 +5,10 @@ public enum UiPreset {
     DEFAULT("Default"),
     FROM_BACKGROUND("From background"),
     NONE("No animation"),
-    FROM_FOREGROUND("From foreground");
+    FROM_FOREGROUND("From foreground"),
+    INHERIT("Same as general");
+
+    public static final UiPreset[] MAIN = {DEFAULT, FROM_BACKGROUND, NONE, FROM_FOREGROUND};
 
     public final String display;
 

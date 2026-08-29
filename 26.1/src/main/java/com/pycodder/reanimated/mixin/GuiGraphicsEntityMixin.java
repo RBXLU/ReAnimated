@@ -8,29 +8,36 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
-/** Fixes clipped content lagging behind during the animation. */
+/** The inventory player model, the one that follows the cursor, rides along with the panel. */
 @Mixin(GuiGraphicsExtractor.class)
-public abstract class DrawContextScissorMixin {
+public abstract class GuiGraphicsEntityMixin {
     @Shadow public abstract Matrix3x2fStack pose();
 
-    @ModifyVariable(method = "enableScissor(IIII)V", at = @At("HEAD"), argsOnly = true, ordinal = 0)
-    private int reanimated$scissorX1(int v) {
+    @ModifyVariable(method = "entity", at = @At("HEAD"), argsOnly = true, ordinal = 0)
+    private int reanimated$entityX1(int v) {
         return reanimated$mapX(v);
     }
 
-    @ModifyVariable(method = "enableScissor(IIII)V", at = @At("HEAD"), argsOnly = true, ordinal = 1)
-    private int reanimated$scissorY1(int v) {
+    @ModifyVariable(method = "entity", at = @At("HEAD"), argsOnly = true, ordinal = 1)
+    private int reanimated$entityY1(int v) {
         return reanimated$mapY(v);
     }
 
-    @ModifyVariable(method = "enableScissor(IIII)V", at = @At("HEAD"), argsOnly = true, ordinal = 2)
-    private int reanimated$scissorX2(int v) {
+    @ModifyVariable(method = "entity", at = @At("HEAD"), argsOnly = true, ordinal = 2)
+    private int reanimated$entityX2(int v) {
         return reanimated$mapX(v);
     }
 
-    @ModifyVariable(method = "enableScissor(IIII)V", at = @At("HEAD"), argsOnly = true, ordinal = 3)
-    private int reanimated$scissorY2(int v) {
+    @ModifyVariable(method = "entity", at = @At("HEAD"), argsOnly = true, ordinal = 3)
+    private int reanimated$entityY2(int v) {
         return reanimated$mapY(v);
+    }
+
+    @ModifyVariable(method = "entity", at = @At("HEAD"), argsOnly = true, ordinal = 0)
+    private float reanimated$entityScale(float v) {
+        Matrix3x2fStack m = pose();
+        float s = (m.m00() + m.m11()) * 0.5f;
+        return s == 1f ? v : v * s;
     }
 
     @Unique

@@ -13,6 +13,8 @@ public final class Anim {
 
     public static int cascadeCount = 1;
 
+    public static boolean currentIsPause = false;
+
     public static long closeStartTime = 0L;
     private static float closeStartProgress = 0f;
     private static float closeStartElapsedMs = 0f;
@@ -38,8 +40,12 @@ public final class Anim {
 
     private static float presetDurationMs(boolean container) {
         ReAnimatedConfig c = ReAnimatedConfig.get();
-        boolean active = enabled(c, container) && c.uiPreset != UiPreset.NONE;
-        return active ? duration(c, container) * 1000f : 0f;
+        return presetLayerActive(container) ? duration(c, container) * 1000f : 0f;
+    }
+
+    public static boolean presetLayerActive(boolean container) {
+        ReAnimatedConfig c = ReAnimatedConfig.get();
+        return enabled(c, container) && preset(c, container) != UiPreset.NONE;
     }
 
     private static float profileDurationMs() {
@@ -92,7 +98,28 @@ public final class Anim {
     }
 
     private static float duration(ReAnimatedConfig c, boolean container) {
-        return Math.max(1, c.animationSpeedTicks) / 20f;
+        int ticks = isPause(container) ? c.pauseSpeedTicks : c.animationSpeedTicks;
+        return Math.max(1, ticks) / 20f;
+    }
+
+    private static boolean isPause(boolean container) {
+        return currentIsPause && !container;
+    }
+
+    private static UiPreset preset(ReAnimatedConfig c, boolean container) {
+        if (isPause(container) && c.pausePreset != null && c.pausePreset != UiPreset.INHERIT) {
+            return c.pausePreset;
+        }
+        return c.uiPreset == null || c.uiPreset == UiPreset.INHERIT ? UiPreset.DEFAULT : c.uiPreset;
+    }
+
+    public static boolean isPauseScreen(Object screen) {
+        if (screen == null) return false;
+        for (Class<?> k = screen.getClass(); k != null && k != Object.class; k = k.getSuperclass()) {
+            String n = k.getSimpleName();
+            if ("GameMenuScreen".equals(n) || "PauseScreen".equals(n)) return true;
+        }
+        return false;
     }
 
     public static boolean shouldAnimate(Object screen) {
@@ -114,15 +141,26 @@ public final class Anim {
     }
 
     private static boolean enabled(ReAnimatedConfig c, boolean container) {
-        return container ? c.containerEnabled : c.screenOpenEnabled;
+        if (container) return c.containerEnabled;
+        return isPause(container) ? c.pauseEnabled : c.screenOpenEnabled;
     }
 
     public static float slideY(boolean container) {
         ReAnimatedConfig c = ReAnimatedConfig.get();
-        if (!enabled(c, container) || c.uiPreset != UiPreset.DEFAULT) return 0f;
+        if (!enabled(c, container) || preset(c, container) != UiPreset.DEFAULT) return 0f;
         float p = isClosing() ? virtualOpenProgress(container) : progress(container);
-        EasingType easing = container ? c.containerEasing : c.screenOpenEasing;
-        float distance = container ? c.containerDistance : c.screenOpenDistance;
+        EasingType easing;
+        float distance;
+        if (container) {
+            easing = c.containerEasing;
+            distance = c.containerDistance;
+        } else if (isPause(container)) {
+            easing = c.pauseEasing;
+            distance = c.pauseDistance;
+        } else {
+            easing = c.screenOpenEasing;
+            distance = c.screenOpenDistance;
+        }
         return (1f - easing.apply(p)) * distance;
     }
 
@@ -130,11 +168,26 @@ public final class Anim {
         return slideY(container) != 0f || scale(container) != 1f;
     }
 
+    public static float backgroundFade(boolean container) {
+        ReAnimatedConfig c = ReAnimatedConfig.get();
+        if (!c.bgFadeEnabled) return 1f;
+        float p;
+        if (isClosing()) {
+            float d = Math.max(1f, duration(c, container) * 1000f);
+            float norm = Easing.clamp01((System.currentTimeMillis() - closeStartTime) / d);
+            p = closeStartProgress * (1f - norm);
+        } else {
+            p = progress(container);
+        }
+        return Easing.outCubic(p);
+    }
+
     public static float scale(boolean container) {
         ReAnimatedConfig c = ReAnimatedConfig.get();
-        if (!enabled(c, container) || !c.uiPreset.isScale()) return 1f;
+        UiPreset preset = preset(c, container);
+        if (!enabled(c, container) || !preset.isScale()) return 1f;
         float p = isClosing() ? virtualOpenProgress(container) : progress(container);
-        if (c.uiPreset == UiPreset.FROM_BACKGROUND) {
+        if (preset == UiPreset.FROM_BACKGROUND) {
             return Easing.lerp(FROM_BACKGROUND_SCALE, 1f, Easing.outBack(p));
         }
         return Easing.lerp(FROM_FOREGROUND_SCALE, 1f, Easing.outCubic(p));

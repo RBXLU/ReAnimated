@@ -5,8 +5,8 @@
   "client": [
     "ScreenMixin",
     "ClickableWidgetMixin",
+    "EntryListWidgetMixin",
     "PressableWidgetMixin",
-    "DrawContextScissorMixin",
     "HandledScreenMixin",
     "LogoDrawerMixin",
     "AdvancementTabMixin",

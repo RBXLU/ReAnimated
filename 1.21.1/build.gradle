@@ -18,6 +18,10 @@ repositories {
         // резолвим ModMenu по артефакту, чтобы сборка не падала из-за флапающего .pom.
         metadataSources { artifact() }
     }
+    maven {
+        url = 'https://api.modrinth.com/maven'
+        content { includeGroup 'maven.modrinth' }
+    }
     mavenCentral()
 }
 
@@ -55,4 +59,38 @@ jar {
     from("LICENSE") {
         rename { "${it}_${project.archivesBaseName}" }
     }
+}
+
+// --- Sodium: интерфейсы его config API, только для компиляции ---
+// Sodium публикуется одним готовым модом, и его манифест помечен Loom 1.16 — наш Loom
+// такой jar брать отказывается («Mod was built with a newer version of Loom»). Нам нужны
+// только интерфейсы net.caffeinemc...api.config, поэтому перекладываем их в отдельный jar
+// без манифеста. Делается прямо здесь, а не задачей: Loom резолвит mod-зависимости на
+// этапе конфигурации, и файл к этому моменту уже должен существовать.
+// Ремап intermediary -> yarn всё ещё нужен, поэтому зависимость остаётся modCompileOnly.
+def sodiumApiJar = layout.buildDirectory.file("sodium-api/sodium-api-${project.sodium_version}.jar").get().asFile
+if (!sodiumApiJar.exists()) {
+    sodiumApiJar.parentFile.mkdirs()
+    def sodiumDist = configurations.detachedConfiguration(
+            dependencies.create("maven.modrinth:sodium:${project.sodium_version}")).singleFile
+    new java.util.zip.ZipOutputStream(new FileOutputStream(sodiumApiJar)).withCloseable { out ->
+        new java.util.zip.ZipFile(sodiumDist).withCloseable { zip ->
+            zip.entries().findAll { entry ->
+                !entry.directory && entry.name.startsWith('net/caffeinemc/mods/sodium/api/')
+            }.each { entry ->
+                out.putNextEntry(new java.util.zip.ZipEntry(entry.name))
+                zip.getInputStream(entry).withCloseable { input -> out << input }
+                out.closeEntry()
+            }
+            // Свой минимальный дескриптор вместо родного: в оригинале объявлены access
+            // widener и миксины, файлов которых мы не переносим, и Loom спотыкается о них.
+            out.putNextEntry(new java.util.zip.ZipEntry('fabric.mod.json'))
+            out << '{"schemaVersion":1,"id":"sodium","version":"1.0.0","name":"Sodium (API only)","environment":"client"}'.bytes
+            out.closeEntry()
+        }
+    }
+}
+
+dependencies {
+    modCompileOnly files(sodiumApiJar)
 }

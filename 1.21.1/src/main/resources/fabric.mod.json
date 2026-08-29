@@ -17,6 +17,9 @@
     ],
     "modmenu": [
       "com.pycodder.reanimated.ReAnimatedModMenu"
+    ],
+    "sodium:config_api_user": [
+      "com.pycodder.reanimated.compat.SodiumIntegration"
     ]
   },
   "mixins": [
