@@ -6,9 +6,9 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
-/** Fixes content lagging behind during the animation on 1.21.1–1.21.3. */
 @Mixin(DrawContext.class)
 public abstract class DrawContextScissorMixin {
+
     @ModifyVariable(method = "enableScissor(IIII)V", at = @At("HEAD"), argsOnly = true, ordinal = 0)
     private int reanimated$scissorX1(int v) {
         return OwnTransform.identity() ? v : OwnTransform.mapX(v);

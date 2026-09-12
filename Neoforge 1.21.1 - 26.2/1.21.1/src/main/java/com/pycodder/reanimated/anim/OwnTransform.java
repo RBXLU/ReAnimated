@@ -1,7 +1,7 @@
 package com.pycodder.reanimated.anim;
 
-/** Tracks ONLY this mod's own UI transforms, separately from the drawing matrix. */
 public final class OwnTransform {
+
     private static final int MAX_DEPTH = 64;
     private static final float[] STACK = new float[MAX_DEPTH * 4];
 
@@ -32,6 +32,24 @@ public final class OwnTransform {
         ty = sy * transY + ty;
         sx *= scaleX;
         sy *= scaleY;
+    }
+
+    public static void pushReset() {
+        if (depth >= MAX_DEPTH) {
+            overflow++;
+            return;
+        }
+        int i = depth * 4;
+        STACK[i] = sx;
+        STACK[i + 1] = sy;
+        STACK[i + 2] = tx;
+        STACK[i + 3] = ty;
+        depth++;
+
+        sx = 1f;
+        sy = 1f;
+        tx = 0f;
+        ty = 0f;
     }
 
     public static void pop() {

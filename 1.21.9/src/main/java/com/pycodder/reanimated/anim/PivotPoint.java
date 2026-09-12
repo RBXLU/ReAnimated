@@ -1,6 +1,5 @@
 package com.pycodder.reanimated.anim;
 
-/** Pivot the interface is scaled around. */
 public enum PivotPoint {
     CENTER("Center", 0.5f, 0.5f),
     TOP("Top", 0.5f, 0f),

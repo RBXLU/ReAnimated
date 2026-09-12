@@ -1,7 +1,7 @@
 package com.pycodder.reanimated.anim;
 
-/** UI open-animation profile: what {@code AnimProfileEditorScreen} edits and real screens then play. */
 public class AnimProfile {
+
     public boolean enabled = false;
     public int durationMs = 400;
     public float offsetX = 0f;
@@ -55,7 +55,6 @@ public class AnimProfile {
         return Easing.clamp01(Easing.lerp(initialAlpha, 1f, eased));
     }
 
-    /** true when the transform at this progress changes nothing, so the matrix can be left alone. */
     public boolean identityAt(float eased) {
         return offsetXAt(eased) == 0f && offsetYAt(eased) == 0f
             && scaleXAt(eased) == 1f && scaleYAt(eased) == 1f;

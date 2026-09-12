@@ -9,9 +9,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Dims the button TEXT along with its frame. */
 @Mixin(PressableWidget.class)
 public abstract class PressableWidgetMixin {
+
     @Inject(method = "renderWidget", at = @At(value = "INVOKE",
         target = "Lnet/minecraft/client/gui/widget/PressableWidget;drawMessage("
                + "Lnet/minecraft/client/gui/DrawContext;Lnet/minecraft/client/font/TextRenderer;I)V"))

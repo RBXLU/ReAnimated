@@ -20,8 +20,8 @@ import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-/** Animation profile editor: parameters on the left, a live three-element preview on the right playing exactly the animation being configured. */
 public class AnimProfileEditorScreen extends Screen {
+
     private static final int ROW_H = 22;
     private static final int LIST_W = 200;
     private static final int LABEL_W = 100;
@@ -53,7 +53,6 @@ public class AnimProfileEditorScreen extends Screen {
         this.working = ReAnimatedConfig.get().profile.copy();
     }
 
-    /** List row: a label on the left with widgets on the right, or a full-width button. */
     private final class Row {
         private final Component label;
         private final List<AbstractWidget> widgets = new ArrayList<>();
@@ -315,8 +314,6 @@ public class AnimProfileEditorScreen extends Screen {
             restartPreview();
             return true;
         }
-        // Rows clipped by the scissor stay visible, but must not react to clicks:
-        // the click would land in the row's hidden half, over the buttons below the list.
         List<AbstractWidget> hidden = new ArrayList<>();
         for (Row row : rows) {
             if (!row.fullyVisible()) {

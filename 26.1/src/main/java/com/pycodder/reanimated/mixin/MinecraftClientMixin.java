@@ -2,6 +2,8 @@ package com.pycodder.reanimated.mixin;
 
 import com.pycodder.reanimated.ReAnimatedClient;
 import com.pycodder.reanimated.anim.Anim;
+import com.pycodder.reanimated.anim.ScreenNav;
+import com.pycodder.reanimated.anim.ScreenRules;
 import com.pycodder.reanimated.config.ReAnimatedConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
@@ -13,9 +15,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Deferred screen close: instead of an immediate {@code setScreen(null)} the screen stays current briefly and plays the open animation in reverse. */
 @Mixin(Minecraft.class)
 public abstract class MinecraftClientMixin {
+
     @Shadow public Screen screen;
 
     @Unique private String reanimated$closeName = null;
@@ -26,11 +28,15 @@ public abstract class MinecraftClientMixin {
         if (Anim.bypassClose) return;
 
         if (screen != null) {
-            if (Anim.isClosing()) Anim.finishClose();
+            reanimated$onOpenScreen(screen, ci);
             return;
         }
 
+        ScreenNav.clear();
+
         if (Anim.isClosing()) {
+            Anim.pendingScreen = null;
+            Anim.clearEnterDir();
             ci.cancel();
             return;
         }
@@ -49,6 +55,35 @@ public abstract class MinecraftClientMixin {
         if (!presetActive && !profileActive) return;
 
         Anim.beginClose(container);
+        ci.cancel();
+    }
+
+    @Unique
+    private void reanimated$onOpenScreen(Screen next, CallbackInfo ci) {
+        if (Anim.isClosing()) {
+            if (Anim.pendingScreen != null) {
+                Anim.pendingScreen = next;
+                ci.cancel();
+            } else {
+                Anim.finishClose();
+            }
+            return;
+        }
+
+        if (!Anim.transitionLayerActive()) return;
+
+        Screen current = this.screen;
+        if (current == null || current == next) return;
+        if (current instanceof AbstractContainerScreen || next instanceof AbstractContainerScreen) return;
+        if (Anim.isVolatileScreen(current) || Anim.isVolatileScreen(next)) return;
+        if (!Anim.shouldAnimate(current) || !Anim.shouldAnimate(next)) return;
+        if (!reanimated$safeToDefer(current)) return;
+
+        Anim.currentIsPause = Anim.isPauseScreen(current);
+        Anim.currentOverride = ScreenRules.get(current);
+
+        int forward = ScreenNav.accept(current, next);
+        Anim.beginTransition(next, -forward);
         ci.cancel();
     }
 

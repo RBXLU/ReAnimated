@@ -16,9 +16,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** "Minecraft" logo animation on the title screen (NeoForge / Mojmap, 1.21.6+ era: Matrix3x2fStack, blit through RenderPipeline, no setColor). */
 @Mixin(LogoRenderer.class)
 public class LogoDrawerMixin {
+
     @Unique private boolean reanimated$pushed = false;
 
     @Unique private static ResourceLocation[] reanimated$letters;

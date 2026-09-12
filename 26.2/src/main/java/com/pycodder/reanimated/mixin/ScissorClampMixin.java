@@ -10,9 +10,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Fixes the "Scissor size must be >0" crash on Minecraft 26.2. */
 @Mixin(GuiRenderer.class)
 public class ScissorClampMixin {
+
     @Inject(method = "enableScissor(Lnet/minecraft/client/gui/navigation/ScreenRectangle;Lcom/mojang/blaze3d/systems/RenderPass;)V",
             at = @At("HEAD"), cancellable = true)
     private void reanimated$skipDegenerateScissor(ScreenRectangle area, RenderPass pass, CallbackInfo ci) {

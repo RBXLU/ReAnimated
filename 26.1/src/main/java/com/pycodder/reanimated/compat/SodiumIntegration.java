@@ -3,11 +3,13 @@ package com.pycodder.reanimated.compat;
 import com.pycodder.reanimated.anim.CascadeOrder;
 import com.pycodder.reanimated.anim.EasingType;
 import com.pycodder.reanimated.anim.LogoStyle;
+import com.pycodder.reanimated.anim.TransitionStyle;
 import com.pycodder.reanimated.anim.UiPreset;
 import com.pycodder.reanimated.config.AnimProfileEditorScreen;
 import com.pycodder.reanimated.config.AnimationStudioScreen;
 import com.pycodder.reanimated.config.ReAnimatedConfig;
 import com.pycodder.reanimated.config.ReAnimatedConfigScreen;
+import com.pycodder.reanimated.config.ScreenRulesScreen;
 import net.caffeinemc.mods.sodium.api.config.ConfigEntryPoint;
 import net.caffeinemc.mods.sodium.api.config.option.ControlValueFormatter;
 import net.caffeinemc.mods.sodium.api.config.structure.ConfigBuilder;
@@ -28,8 +30,8 @@ import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
-/** Mod settings inside Sodium's own screen: a page in its left-hand list using its own controls, rather than a floating button over someone else's screen. */
 public class SodiumIntegration implements ConfigEntryPoint {
+
     private static final ReAnimatedConfig DEFAULTS = new ReAnimatedConfig();
 
     @Override
@@ -43,8 +45,10 @@ public class SodiumIntegration implements ConfigEntryPoint {
         mod.addPage(general(builder, c));
         mod.addPage(menu(builder, c));
         mod.addPage(pause(builder, c));
+        mod.addPage(transitions(builder, c));
         mod.addPage(containers(builder, c));
         mod.addPage(cursor(builder, c));
+        mod.addPage(popups(builder, c));
         mod.addPage(logo(builder, c));
         mod.addPage(tabs(builder, c));
 
@@ -73,7 +77,9 @@ public class SodiumIntegration implements ConfigEntryPoint {
             .addOption(screenOpt(b, "profile_editor", "reanimated.opt.profile_editor",
                 prev -> Minecraft.getInstance().setScreen(new AnimProfileEditorScreen(prev))))
             .addOption(screenOpt(b, "own_screen", "reanimated.config.open",
-                prev -> Minecraft.getInstance().setScreen(new ReAnimatedConfigScreen(prev))));
+                prev -> Minecraft.getInstance().setScreen(new ReAnimatedConfigScreen(prev))))
+            .addOption(screenOpt(b, "screens", "reanimated.opt.screens",
+                prev -> Minecraft.getInstance().setScreen(new ScreenRulesScreen(prev))));
 
         return page(b, "reanimated.tab.general").addOptionGroup(main).addOptionGroup(tools);
     }
@@ -103,6 +109,61 @@ public class SodiumIntegration implements ConfigEntryPoint {
                 v -> c.pauseDistance = v))
             .addOption(easingOpt(b, "pause_easing", "reanimated.opt.pause_easing",
                 DEFAULTS.pauseEasing, () -> c.pauseEasing, v -> c.pauseEasing = v)));
+    }
+
+    private static OptionPageBuilder transitions(ConfigBuilder b, ReAnimatedConfig c) {
+        return page(b, "reanimated.tab.transitions").addOptionGroup(group(b, "reanimated.tab.transitions")
+            .addOption(boolOpt(b, "transition_enabled", "reanimated.opt.transition_enabled",
+                DEFAULTS.transitionEnabled, () -> c.transitionEnabled, v -> c.transitionEnabled = v))
+            .addOption(enumOpt(b, "transition_style", "reanimated.opt.transition_style", TransitionStyle.class,
+                EnumSet.allOf(TransitionStyle.class), t -> t.display, DEFAULTS.transitionStyle,
+                () -> c.transitionStyle, v -> c.transitionStyle = v))
+            .addOption(intOpt(b, "transition_speed", "reanimated.opt.transition_speed", 1, 20, 1, TICKS,
+                DEFAULTS.transitionSpeedTicks, () -> c.transitionSpeedTicks, v -> c.transitionSpeedTicks = v))
+            .addOption(intOpt(b, "transition_distance", "reanimated.opt.transition_distance", 0, 120, 1, PIXELS,
+                Math.round(DEFAULTS.transitionDistance), () -> Math.round(c.transitionDistance),
+                v -> c.transitionDistance = v))
+            .addOption(easingOpt(b, "transition_easing", "reanimated.opt.transition_easing",
+                DEFAULTS.transitionEasing, () -> c.transitionEasing, v -> c.transitionEasing = v)));
+    }
+
+    private static OptionPageBuilder popups(ConfigBuilder b, ReAnimatedConfig c) {
+        OptionGroupBuilder recipeBook = group(b, "reanimated.opt.recipebook_enabled")
+            .addOption(boolOpt(b, "recipebook_enabled", "reanimated.opt.recipebook_enabled",
+                DEFAULTS.recipeBookEnabled, () -> c.recipeBookEnabled, v -> c.recipeBookEnabled = v))
+            .addOption(intOpt(b, "recipebook_duration", "reanimated.opt.recipebook_duration", 30, 500, 10, MILLIS,
+                DEFAULTS.recipeBookDurationMs, () -> c.recipeBookDurationMs, v -> c.recipeBookDurationMs = v))
+            .addOption(intOpt(b, "recipebook_scale", "reanimated.opt.recipebook_scale", 50, 100, 1, PERCENT,
+                percent(DEFAULTS.recipeBookScale), () -> percent(c.recipeBookScale), v -> c.recipeBookScale = v / 100f))
+            .addOption(intOpt(b, "recipebook_offset", "reanimated.opt.recipebook_offset", 0, 40, 1, PIXELS,
+                Math.round(DEFAULTS.recipeBookOffsetX), () -> Math.round(c.recipeBookOffsetX),
+                v -> c.recipeBookOffsetX = v))
+            .addOption(easingOpt(b, "recipebook_easing", "reanimated.opt.recipebook_easing",
+                DEFAULTS.recipeBookEasing, () -> c.recipeBookEasing, v -> c.recipeBookEasing = v));
+
+        OptionGroupBuilder tooltips = group(b, "reanimated.opt.tooltip_enabled")
+            .addOption(boolOpt(b, "tooltip_enabled", "reanimated.opt.tooltip_enabled",
+                DEFAULTS.tooltipEnabled, () -> c.tooltipEnabled, v -> c.tooltipEnabled = v))
+            .addOption(intOpt(b, "tooltip_duration", "reanimated.opt.tooltip_duration", 30, 500, 10, MILLIS,
+                DEFAULTS.tooltipDurationMs, () -> c.tooltipDurationMs, v -> c.tooltipDurationMs = v))
+            .addOption(intOpt(b, "tooltip_scale", "reanimated.opt.tooltip_scale", 50, 100, 1, PERCENT,
+                percent(DEFAULTS.tooltipScale), () -> percent(c.tooltipScale), v -> c.tooltipScale = v / 100f))
+            .addOption(intOpt(b, "tooltip_offset", "reanimated.opt.tooltip_offset", -20, 20, 1, PIXELS,
+                Math.round(DEFAULTS.tooltipOffsetY), () -> Math.round(c.tooltipOffsetY),
+                v -> c.tooltipOffsetY = v))
+            .addOption(easingOpt(b, "tooltip_easing", "reanimated.opt.tooltip_easing",
+                DEFAULTS.tooltipEasing, () -> c.tooltipEasing, v -> c.tooltipEasing = v));
+
+        OptionGroupBuilder toasts = group(b, "reanimated.opt.toast_enabled")
+            .addOption(boolOpt(b, "toast_enabled", "reanimated.opt.toast_enabled",
+                DEFAULTS.toastEnabled, () -> c.toastEnabled, v -> c.toastEnabled = v))
+            .addOption(intOpt(b, "toast_duration", "reanimated.opt.toast_duration", 100, 600, 10, MILLIS,
+                DEFAULTS.toastDurationMs, () -> c.toastDurationMs, v -> c.toastDurationMs = v))
+            .addOption(easingOpt(b, "toast_easing", "reanimated.opt.toast_easing",
+                DEFAULTS.toastEasing, () -> c.toastEasing, v -> c.toastEasing = v));
+
+        return page(b, "reanimated.tab.popups")
+            .addOptionGroup(recipeBook).addOptionGroup(tooltips).addOptionGroup(toasts);
     }
 
     private static OptionPageBuilder containers(ConfigBuilder b, ReAnimatedConfig c) {

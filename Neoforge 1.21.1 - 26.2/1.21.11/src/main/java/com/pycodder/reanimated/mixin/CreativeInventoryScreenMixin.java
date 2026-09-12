@@ -15,9 +15,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Creative inventory tabs fade in: tabs slide out from behind the panel one by one. */
 @Mixin(CreativeModeInventoryScreen.class)
 public class CreativeInventoryScreenMixin {
+
     @Unique private boolean reanimated$pushed = false;
 
     @Inject(method = "renderTabButton(Lnet/minecraft/client/gui/GuiGraphics;IILnet/minecraft/world/item/CreativeModeTab;)V", at = @At("HEAD"))

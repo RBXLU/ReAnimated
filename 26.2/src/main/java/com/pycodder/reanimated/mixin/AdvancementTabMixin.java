@@ -13,9 +13,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Advancements tabs fade in (Minecraft 26.x: render-state extraction). */
 @Mixin(AdvancementTab.class)
 public abstract class AdvancementTabMixin {
+
     @Unique private static final int REANIMATED$WINDOW_HEIGHT = 140;
 
     @Shadow public abstract int getIndex();

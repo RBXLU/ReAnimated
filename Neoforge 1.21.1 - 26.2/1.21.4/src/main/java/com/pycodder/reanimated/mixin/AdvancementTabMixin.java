@@ -14,9 +14,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Advancements screen tabs fade in: tabs slide out from behind the window one by one. */
 @Mixin(AdvancementTab.class)
 public abstract class AdvancementTabMixin {
+
     @Unique private static final int REANIMATED$WINDOW_HEIGHT = 140;
 
     @Shadow public abstract int getIndex();

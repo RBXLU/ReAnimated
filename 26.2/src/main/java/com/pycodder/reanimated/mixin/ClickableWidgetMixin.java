@@ -20,9 +20,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/** Minecraft 26.x: the widget's draw point is {@code extractRenderState}. */
 @Mixin(AbstractWidget.class)
 public abstract class ClickableWidgetMixin implements CascadeTarget {
+
     @Shadow public abstract int getX();
     @Shadow public abstract int getY();
     @Shadow public abstract int getWidth();

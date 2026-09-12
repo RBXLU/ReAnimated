@@ -21,7 +21,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Locale;
 
-/** NeoForge entry point. */
 @Mod(value = "reanimated", dist = Dist.CLIENT)
 public class ReAnimatedClient {
     public static final String MOD_ID = "reanimated";
@@ -41,7 +40,6 @@ public class ReAnimatedClient {
     private static final int BUTTON_H = 20;
     private static final int MARGIN = 6;
 
-    /** Spot found for the button: position, and width shrunk to the free gap. */
     private record Spot(int x, int y, int width) {}
 
     private static void onScreenInit(ScreenEvent.Init.Post event) {

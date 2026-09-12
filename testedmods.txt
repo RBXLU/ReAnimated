@@ -6,6 +6,7 @@ Create: Copycats+
 Create Aeronautica
 Ultimate car mod
 JEI (Just Enough Items)
+EMI (Enough Mod Items)
 Sodium
 VulkanMod
 MeteorClient and addons

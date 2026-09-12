@@ -21,9 +21,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/** List frames ({@code AbstractContainerWidget}) are neither scaled on hover nor cascaded per button here: they have their own per-row cascade. */
 @Mixin(AbstractWidget.class)
 public abstract class ClickableWidgetMixin implements CascadeTarget {
+
     @Shadow public abstract int getX();
     @Shadow public abstract int getY();
     @Shadow public abstract int getWidth();

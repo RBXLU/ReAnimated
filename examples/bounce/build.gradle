@@ -1,0 +1,59 @@
+plugins {
+    id 'fabric-loom' version '1.13.6'
+    id 'java'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
+repositories {
+    maven { url = 'https://maven.fabricmc.net/' }
+    mavenCentral()
+}
+
+// --- ReAnimated: только для компиляции ---
+// Мод-пример собирается против jar'а самого ReAnimated. Он не публикуется в maven,
+// поэтому берём собранный файл из соседней папки: сначала соберите основной мод
+// (`cd ../../1.21.11 && ./gradlew build`), потом этот пример.
+// В рантайме API приходит из самого ReAnimated, так что зависимость compile-only.
+def reanimatedJar = fileTree(dir: rootProject.file('../../1.21.11/build/libs'),
+        includes: ['reanimated-*.jar'], excludes: ['*-sources.jar']).files
+        .sort { it.name }
+        .reverse()
+        .find()
+
+if (reanimatedJar == null) {
+    throw new GradleException("Не найден jar ReAnimated в ../../1.21.11/build/libs — соберите основной мод: cd ../../1.21.11 && ./gradlew build")
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    modCompileOnly files(reanimatedJar)
+}
+
+processResources {
+    inputs.property "version", project.version
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version
+    }
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding = "UTF-8"
+    it.options.release = 21
+}

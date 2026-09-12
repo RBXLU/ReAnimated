@@ -20,8 +20,8 @@ import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-/** Animation Studio: a separate screen for building your own open/close animation from scratch. */
 public class AnimationStudioScreen extends Screen {
+
     private static final int ROW_H = 23;
     private static final int HEADER_H = 15;
     private static final int PREVIEW_ELEMENTS = 3;
@@ -30,7 +30,6 @@ public class AnimationStudioScreen extends Screen {
     private final Screen parent;
     private final AnimProfile working;
 
-    /** Tools list entry: either a heading label or a full-width widget. */
     private final class Item {
         private final Component header;
         private final AbstractWidget widget;
@@ -206,7 +205,6 @@ public class AnimationStudioScreen extends Screen {
         return values[(value.ordinal() + 1) % values.length];
     }
 
-    /** Floating-point slider that updates the preview live. */
     private final class FloatSlider extends AbstractSliderButton {
         private final Component label;
         private final String unit;
@@ -464,8 +462,6 @@ public class AnimationStudioScreen extends Screen {
             restartPreview();
             return true;
         }
-        // Rows clipped by the scissor stay visible, but must not react to clicks:
-        // the click would land in the row's hidden half, over the buttons below the list.
         List<AbstractWidget> hidden = new ArrayList<>();
         for (Item item : items) {
             if (item.widget != null && item.widget.visible

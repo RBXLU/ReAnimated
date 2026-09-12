@@ -1,11 +1,11 @@
 package com.pycodder.reanimated.mixin;
 
 import com.pycodder.reanimated.anim.Anim;
+import com.pycodder.reanimated.anim.UiTransform;
 import com.pycodder.reanimated.anim.Easing;
 import com.pycodder.reanimated.config.ReAnimatedConfig;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import org.joml.Matrix3x2fStack;
 import net.minecraft.screen.slot.Slot;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -14,14 +14,19 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Container screens. */
 @Mixin(HandledScreen.class)
 public abstract class HandledScreenMixin implements com.pycodder.reanimated.anim.PanelBounds {
+
     @Shadow protected int x;
     @Shadow protected int y;
     @Shadow protected int backgroundWidth;
     @Shadow protected int backgroundHeight;
     @Shadow protected Slot focusedSlot;
+
+    @Override
+    public int reanimated$panelLeft() {
+        return this.x;
+    }
 
     @Override
     public int reanimated$panelTop() {
@@ -39,28 +44,11 @@ public abstract class HandledScreenMixin implements com.pycodder.reanimated.anim
     @Unique private float reanimated$slotY = Float.NaN;
     @Unique private long reanimated$slotTime = 0L;
 
-    @Unique
-    private void reanimated$applyInverse(Matrix3x2fStack m) {
-        float sy = Anim.slideY(true);
-        float sc = Anim.scale(true);
-        if (sc != 1f) {
-            net.minecraft.client.util.Window win = net.minecraft.client.MinecraftClient.getInstance().getWindow();
-            float cx = win.getScaledWidth() / 2f;
-            float cy = win.getScaledHeight() / 2f;
-            m.translate(cx, cy);
-            m.scale(1f / sc, 1f / sc);
-            m.translate(-cx, -cy);
-        }
-        m.translate(0f, -sy);
-    }
-
     @Inject(method = "renderBackground", at = @At("HEAD"))
     private void reanimated$blurPush(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         reanimated$blurPushed = Anim.transformActive(true) && Anim.shouldAnimate(this);
         if (reanimated$blurPushed) {
-            Matrix3x2fStack m = context.getMatrices();
-            m.pushMatrix();
-            reanimated$applyInverse(m);
+            reanimated$blurPushed = UiTransform.pushBase(context.getMatrices());
         }
     }
 
@@ -69,7 +57,7 @@ public abstract class HandledScreenMixin implements com.pycodder.reanimated.anim
             shift = At.Shift.BEFORE))
     private void reanimated$blurPop(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if (reanimated$blurPushed) {
-            context.getMatrices().popMatrix();
+            UiTransform.popBase(context.getMatrices());
         }
     }
 

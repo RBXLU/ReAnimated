@@ -1,7 +1,6 @@
 package com.pycodder.reanimated.mixin;
 
 import com.mojang.blaze3d.platform.Window;
-import com.mojang.blaze3d.vertex.PoseStack;
 import com.pycodder.reanimated.anim.Anim;
 import com.pycodder.reanimated.anim.Easing;
 import com.pycodder.reanimated.anim.PanelBounds;
@@ -18,14 +17,19 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Container screens (NeoForge / Mojmap). */
 @Mixin(AbstractContainerScreen.class)
 public abstract class HandledScreenMixin implements PanelBounds {
+
     @Shadow protected int leftPos;
     @Shadow protected int topPos;
     @Shadow protected int imageWidth;
     @Shadow protected int imageHeight;
     @Shadow protected Slot hoveredSlot;
+
+    @Override
+    public int reanimated$panelLeft() {
+        return this.leftPos;
+    }
 
     @Override
     public int reanimated$panelTop() {
@@ -43,19 +47,11 @@ public abstract class HandledScreenMixin implements PanelBounds {
     @Unique private float reanimated$slotY = Float.NaN;
     @Unique private long reanimated$slotTime = 0L;
 
-    @Unique
-    private void reanimated$applyInverse(PoseStack m) {
-        Window win = Minecraft.getInstance().getWindow();
-        UiTransform.inverse(m, win.getGuiScaledWidth(), win.getGuiScaledHeight(), true);
-    }
-
     @Inject(method = "renderBackground", at = @At("HEAD"))
     private void reanimated$blurPush(GuiGraphics graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         reanimated$blurPushed = Anim.transformActive(true) && Anim.shouldAnimate(this);
         if (reanimated$blurPushed) {
-            PoseStack m = graphics.pose();
-            m.pushPose();
-            reanimated$applyInverse(m);
+            reanimated$blurPushed = UiTransform.pushBase(graphics.pose());
         }
     }
 
@@ -64,8 +60,7 @@ public abstract class HandledScreenMixin implements PanelBounds {
             shift = At.Shift.BEFORE))
     private void reanimated$blurPop(GuiGraphics graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if (reanimated$blurPushed) {
-            graphics.pose().popPose();
-            com.pycodder.reanimated.anim.OwnTransform.pop();
+            UiTransform.popBase(graphics.pose());
         }
     }
 

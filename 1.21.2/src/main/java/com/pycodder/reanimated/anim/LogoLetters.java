@@ -1,6 +1,5 @@
 package com.pycodder.reanimated.anim;
 
-/** Letter-by-letter cascade of the "Minecraft" logo. */
 public final class LogoLetters {
     private LogoLetters() {}
 

@@ -1,8 +1,12 @@
 package com.pycodder.reanimated.config;
 
 import com.pycodder.reanimated.anim.CascadeOrder;
+import com.pycodder.reanimated.api.CustomPreset;
+import com.pycodder.reanimated.api.ReAnimatedApi;
+import com.pycodder.reanimated.api.SettingsEntry;
 import com.pycodder.reanimated.anim.EasingType;
 import com.pycodder.reanimated.anim.LogoStyle;
+import com.pycodder.reanimated.anim.TransitionStyle;
 import com.pycodder.reanimated.anim.UiPreset;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.components.AbstractSliderButton;
@@ -21,8 +25,8 @@ import java.util.function.DoubleConsumer;
 import java.util.function.IntConsumer;
 import java.util.function.Supplier;
 
-/** Mod settings screen (Minecraft 26.x). */
 public class ReAnimatedConfigScreen extends Screen {
+
     private static final String AUTHOR_URL = "https://modrinth.com/user/pycodder";
     private static final String TESTED_URL = "https://github.com/RBXLU/ReAnimated/blob/main/testedmods.txt";
 
@@ -34,6 +38,8 @@ public class ReAnimatedConfigScreen extends Screen {
         "reanimated.tab.cursor",
         "reanimated.tab.logo",
         "reanimated.tab.tabs",
+        "reanimated.tab.transitions",
+        "reanimated.tab.popups",
     };
 
     private final Screen parent;
@@ -132,6 +138,29 @@ public class ReAnimatedConfigScreen extends Screen {
                 rows.add(slider("reanimated.opt.tabs_offset", -120, 120, c.profileTabs.offsetY, " px", v -> c.profileTabs.offsetY = (float) v));
                 rows.add(easing("reanimated.opt.tabs_easing", () -> c.profileTabs.easing, v -> c.profileTabs.easing = v));
             }
+            case 7 -> {
+                rows.add(toggle("reanimated.opt.transition_enabled", () -> c.transitionEnabled, v -> c.transitionEnabled = v));
+                rows.add(cycler("reanimated.opt.transition_style", () -> c.transitionStyle, v -> c.transitionStyle = v,
+                        TransitionStyle.values(), t -> t.display));
+                rows.add(intSlider("reanimated.opt.transition_speed", 1, 20, c.transitionSpeedTicks, " t", v -> c.transitionSpeedTicks = v));
+                rows.add(slider("reanimated.opt.transition_distance", 0, 120, c.transitionDistance, " px", v -> c.transitionDistance = (float) v));
+                rows.add(easing("reanimated.opt.transition_easing", () -> c.transitionEasing, v -> c.transitionEasing = v));
+            }
+            case 8 -> {
+                rows.add(toggle("reanimated.opt.tooltip_enabled", () -> c.tooltipEnabled, v -> c.tooltipEnabled = v));
+                rows.add(intSlider("reanimated.opt.tooltip_duration", 30, 500, c.tooltipDurationMs, " ms", v -> c.tooltipDurationMs = v));
+                rows.add(slider("reanimated.opt.tooltip_scale", 0.5, 1.0, c.tooltipScale, "", v -> c.tooltipScale = (float) v));
+                rows.add(slider("reanimated.opt.tooltip_offset", -20, 20, c.tooltipOffsetY, " px", v -> c.tooltipOffsetY = (float) v));
+                rows.add(easing("reanimated.opt.tooltip_easing", () -> c.tooltipEasing, v -> c.tooltipEasing = v));
+                rows.add(toggle("reanimated.opt.toast_enabled", () -> c.toastEnabled, v -> c.toastEnabled = v));
+                rows.add(intSlider("reanimated.opt.toast_duration", 100, 600, c.toastDurationMs, " ms", v -> c.toastDurationMs = v));
+                rows.add(easing("reanimated.opt.toast_easing", () -> c.toastEasing, v -> c.toastEasing = v));
+                rows.add(toggle("reanimated.opt.recipebook_enabled", () -> c.recipeBookEnabled, v -> c.recipeBookEnabled = v));
+                rows.add(intSlider("reanimated.opt.recipebook_duration", 30, 500, c.recipeBookDurationMs, " ms", v -> c.recipeBookDurationMs = v));
+                rows.add(slider("reanimated.opt.recipebook_scale", 0.5, 1.0, c.recipeBookScale, "", v -> c.recipeBookScale = (float) v));
+                rows.add(slider("reanimated.opt.recipebook_offset", 0, 40, c.recipeBookOffsetX, " px", v -> c.recipeBookOffsetX = (float) v));
+                rows.add(easing("reanimated.opt.recipebook_easing", () -> c.recipeBookEasing, v -> c.recipeBookEasing = v));
+            }
             default -> {
                 rows.add(cycler("reanimated.opt.preset", () -> c.uiPreset, v -> c.uiPreset = v, UiPreset.MAIN, p -> p.display));
                 rows.add(intSlider("reanimated.opt.speed_ticks", 1, 40, c.animationSpeedTicks, " t", v -> c.animationSpeedTicks = v));
@@ -151,6 +180,21 @@ public class ReAnimatedConfigScreen extends Screen {
                 rows.add(Button.builder(Component.translatable("reanimated.opt.studio"),
                                 b -> this.minecraft.gui.setScreen(new AnimationStudioScreen(this)))
                         .bounds(0, 0, 158, 20).build());
+                rows.add(Button.builder(Component.translatable("reanimated.opt.screens"),
+                                b -> this.minecraft.gui.setScreen(new ScreenRulesScreen(this)))
+                        .bounds(0, 0, 158, 20).build());
+                java.util.List<CustomPreset> extensionPresets = ReAnimatedApi.presets();
+                if (!extensionPresets.isEmpty()) {
+                    rows.add(extensionPreset(c, extensionPresets));
+                }
+                for (SettingsEntry entry : ReAnimatedApi.settingsEntries()) {
+                    rows.add(Button.builder(Component.literal(entry.label()),
+                                    b -> {
+                                        ReAnimatedApi.openEntry(entry, this);
+                                        rebuildWidgets();
+                                    })
+                            .bounds(0, 0, 158, 20).build());
+                }
             }
         }
 
@@ -181,6 +225,37 @@ public class ReAnimatedConfigScreen extends Screen {
 
     private static Component tabLabel(int i) {
         return Component.translatable(TABS[i]);
+    }
+
+    private Button extensionPreset(ReAnimatedConfig c, java.util.List<CustomPreset> presets) {
+        return Button.builder(extensionLabel(c, presets), b -> {
+            int next = (extensionIndex(c, presets) + 1) % (presets.size() + 1);
+            if (next == 0) {
+                if (c.uiPreset == UiPreset.CUSTOM) c.uiPreset = UiPreset.DEFAULT;
+                c.customPresetId = "";
+            } else {
+                c.uiPreset = UiPreset.CUSTOM;
+                c.customPresetId = presets.get(next - 1).id();
+            }
+            c.save();
+            b.setMessage(extensionLabel(c, presets));
+        }).bounds(0, 0, 158, 20).build();
+    }
+
+    private static int extensionIndex(ReAnimatedConfig c, java.util.List<CustomPreset> presets) {
+        if (c.uiPreset != UiPreset.CUSTOM) return 0;
+        for (int i = 0; i < presets.size(); i++) {
+            if (presets.get(i).id().equals(c.customPresetId)) return i + 1;
+        }
+        return 0;
+    }
+
+    private static Component extensionLabel(ReAnimatedConfig c, java.util.List<CustomPreset> presets) {
+        int i = extensionIndex(c, presets);
+        Component value = i == 0
+            ? Component.translatable("reanimated.opt.custom_preset.off")
+            : Component.literal(presets.get(i - 1).displayName());
+        return Component.translatable("reanimated.opt.custom_preset").append(Component.literal(": ")).append(value);
     }
 
     private Button toggle(String key, BooleanSupplier get, Consumer<Boolean> set) {
@@ -267,7 +342,6 @@ public class ReAnimatedConfigScreen extends Screen {
         this.minecraft.setScreenAndShow(parent);
     }
 
-    /** Slider built on the stable AbstractSliderButton (value: 0..1). */
     private static class ConfigSlider extends AbstractSliderButton {
         private final String key;
         private final double min;
@@ -299,7 +373,6 @@ public class ReAnimatedConfigScreen extends Screen {
         }
     }
 
-    /** Integer slider: durations in ms, animation speed in ticks. */
     private static class IntSlider extends AbstractSliderButton {
         private final String key;
         private final int min;

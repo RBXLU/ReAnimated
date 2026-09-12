@@ -9,10 +9,14 @@
     "PressableWidgetMixin",
     "DrawContextScissorMixin",
     "HandledScreenMixin",
+    "RecipeBookWidgetMixin",
     "LogoDrawerMixin",
     "AdvancementTabMixin",
     "CreativeInventoryScreenMixin",
-    "MinecraftClientMixin"
+    "MinecraftClientMixin",
+    "DrawContextTooltipMixin",
+    "ToastEntryMixin",
+    "compat.EmiStackBatcherMixin"
   ],
   "injectors": {
     "defaultRequire": 1

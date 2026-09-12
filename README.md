@@ -1,3 +1,7 @@
+<p align="center">
+<img src="https://raw.githubusercontent.com/RBXLU/devReAnimated/main/docs/images/hero.png" alt="ReAnimated — smooth animations for the entire Minecraft UI" width="100%">
+</p>
+
 # ReAnimated
 [![Available for Fabric](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/supported/fabric_vector.svg)](https://fabricmc.net/)
 [![Requires FabricAPI](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3.3.1/assets/cozy/requires/fabric-api_vector.svg)](https://modrinth.com/mod/fabric-api)
@@ -25,14 +29,21 @@ Open a menu — the main menu, your inventory, a chest, a furnace, doesn't matte
 - **Buttons press in** — clicking a button (or pressing Enter on it) dips it inward and springs it back.
 - **Background dimming fades in** — the dim behind a screen builds up along with the panel instead of snapping on.
 - **Lists animate too** — the mod list in Mod Menu, servers, worlds and resource packs travel with the screen, and their rows arrive one after another.
+- **Screens hand over to each other** — opening Settings from the main menu slides the old screen out and brings the new one in from the other side; going back plays it in reverse. Slide, zoom, or both.
+- **Tooltips grow in** — a tooltip eases out of the cursor instead of blinking into place. Works for item tooltips and for tooltips added by other mods.
+- **Toasts slide on your curve** — advancement, recipe and system notifications keep vanilla's timing but travel along the trajectory you pick, with a little overshoot if you want one.
 
 ### Presets & your own animations
 Every screen animates through a preset you choose:
 
 - **Default** — slides up from the bottom
+- **Slide down / from left / from right** — the same entrance from the other three sides
 - **From background** — grows out of the center with a little bounce
 - **From foreground** — flies in and settles down to normal size
+- **Pop** — jumps out of a point with a strong overshoot
 - **None** — turns the movement off but keeps the rest
+
+Other mods can add presets of their own through the [extension API](API.md) — they appear in the settings next to the built-in ones.
 
 Want something specific? Open the **Animation Studio** or the **Profile Editor** built into the settings — live sliders, ready-made starting points, an easing-curve graph and a live preview, so you can dial in your own open/close animation.
 
@@ -42,9 +53,10 @@ Open **Options → Video Settings → `ReAnimated settings`**, or through **Mod 
 
 **Running Sodium 0.8+?** ReAnimated gets its own entry inside Sodium's settings screen — real pages in the list on the left, drawn with Sodium's own controls and covered by its search. On older Sodium, VulkanMod or Iris a button appears in their screen instead.
 
-The settings are grouped into sections — **General · Menu screens · Pause menu · Containers · Cursor · Logo · Tabs** — and every animation can be tuned independently:
+The settings are grouped into sections — **General · Menu screens · Pause menu · Screen transitions · Containers · Cursor · Tooltips & toasts · Logo · Tabs** — and every animation can be tuned independently:
 
 - **The pause menu has its own settings** — speed, distance, trajectory and preset, separate from other menus
+- **Per-screen settings** — give one screen its own preset or speed, or switch its animation off entirely; screens show up in the list once you have opened them
 - **Export / Import** — copy your whole configuration to the clipboard and paste it into another instance, or share it
 - **Animate lists** — row-by-row appearance for the mod list, servers, worlds and resource packs (can be switched off)
 - **Enable / disable** each animation
@@ -65,9 +77,9 @@ Client-side only — not required on servers, and players without it won't notic
 ### Supported versions
 There's a separate download for each Minecraft version. The GUI rendering changed a fair amount across 1.21.x and again in 26.x, so every version has its own build made against it — grab the one that matches your game exactly.
 
-**NeoForge:** builds are kept level with the Fabric line — same version number, same features.
+**NeoForge:** same features, one release number behind — 1.5.0 never shipped for NeoForge, so Fabric **1.7** is NeoForge **1.6**.
 
-> Each file is pinned to one Minecraft version — pick the one that matches your game. The mod version looks like `<Minecraft version>+<mod version>`, e.g. `1.21.1+1.6`.
+> Each file is pinned to one Minecraft version — pick the one that matches your game. The mod version looks like `<Minecraft version>+<mod version>`, e.g. `1.21.1+1.7`.
 
 ---
 
@@ -92,15 +104,22 @@ Made with ❤️ by **[@pycodder](https://modrinth.com/user/pycodder)**
 - **Кнопки вдавливаются** — нажатие мышью или Enter'ом проседает кнопку и упруго возвращает её.
 - **Затемнение фона появляется плавно** — вместе с панелью, а не мгновенно.
 - **Списки тоже анимируются** — список модов в Mod Menu, сервера, миры и ресурспаки едут вместе с экраном, строки появляются по очереди.
+- **Экраны передают друг другу эстафету** — открываете настройки из главного меню, и старый экран уезжает в сторону, а новый приходит с противоположной; на возврате — в обратную сторону. Сдвиг, масштаб или всё сразу.
+- **Подсказки вырастают** — подсказка плавно появляется у курсора, а не возникает рывком. Работает и для подсказок предметов, и для подсказок из других модов.
+- **Уведомления выезжают по вашей кривой** — достижения, рецепты и системные сообщения сохраняют ванильные тайминги, но двигаются по выбранной траектории, с отскоком, если он нужен.
 - **Увеличение кнопок при наведении** — кнопки мягко растут под курсором и возвращаются обратно.
 
 ### Пресеты и свои анимации
 Каждый экран анимируется выбранным пресетом:
 
 - **Default** — выезжает снизу
+- **Выезд сверху / слева / справа** — то же появление с трёх других сторон
 - **From background** — вырастает из центра с лёгким отскоком
 - **From foreground** — влетает и уменьшается до нормального размера
+- **Pop** — выскакивает из точки с сильным отскоком
 - **None** — движение выключено, остальное работает
+
+Другие моды могут добавлять свои пресеты через [API расширений](API.md) — они появляются в настройках рядом со встроенными.
 
 Нужно что-то своё? В настройках есть **Студия анимаций** и **Редактор профиля** — живые ползунки, готовые пресеты, график easing и живое превью, чтобы собрать свою анимацию открытия/закрытия.
 
@@ -108,13 +127,13 @@ Made with ❤️ by **[@pycodder](https://modrinth.com/user/pycodder)**
 
 Настройки → Настройки графики → «Настройки ReAnimated», или через **Mod Menu**.
 
-**Стоит Sodium 0.8+?** ReAnimated появится отдельным пунктом внутри экрана Sodium — своими страницами в списке слева, его же элементами управления и с его поиском. На старом Sodium, VulkanMod или Iris вместо этого добавляется кнопка в их экран. Настройки разбиты на секции — **Общее · Экраны меню · Меню паузы · Контейнеры · Курсор · Логотип · Вкладки** — у каждой анимации свой переключатель, ползунки длительности, дистанции/глубины и траектории. У меню паузы свой набор настроек (скорость, дистанция, траектория, пресет), а кнопки **Копировать/Вставить** переносят всю конфигурацию через буфер обмена. Всё сохраняется в `config/reanimated.json` и применяется сразу.
+**Стоит Sodium 0.8+?** ReAnimated появится отдельным пунктом внутри экрана Sodium — своими страницами в списке слева, его же элементами управления и с его поиском. На старом Sodium, VulkanMod или Iris вместо этого добавляется кнопка в их экран. Настройки разбиты на секции — **Общее · Экраны меню · Меню паузы · Переходы · Контейнеры · Курсор · Подсказки и уведомления · Логотип · Вкладки** — у каждой анимации свой переключатель, ползунки длительности, дистанции/глубины и траектории. У меню паузы свой набор настроек (скорость, дистанция, траектория, пресет), а кнопки **Копировать/Вставить** переносят всю конфигурацию через буфер обмена. Отдельным экраном настраиваются **отдельные экраны**: своя анимация, своя скорость или её отсутствие для конкретного меню (экран появляется в списке после того, как вы его открыли). Всё сохраняется в `config/reanimated.json` и применяется сразу.
 
 ### Поддержка
 
 Fabric / Quilt + Fabric API, Minecraft **1.21.1 – 1.21.11**, а также сборки **26.1 / 26.2**. Для каждой версии — отдельная сборка (рендеринг интерфейса заметно менялся между версиями), бери ровно под свою игру.
 
-**NeoForge:** возможности те же, но нумерация отстаёт на релиз: версия 1.5.0 для NeoForge не выходила, поэтому Fabric **1.6** соответствует NeoForge **1.5**.
+**NeoForge:** возможности те же, но нумерация отстаёт на релиз: версия 1.5.0 для NeoForge не выходила, поэтому Fabric **1.7** соответствует NeoForge **1.6**.
 
 ### Благодарности
 

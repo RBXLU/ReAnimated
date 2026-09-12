@@ -14,9 +14,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Creative inventory tabs fade in (Minecraft 26.x: render-state extraction). */
 @Mixin(CreativeModeInventoryScreen.class)
 public class CreativeInventoryScreenMixin {
+
     @Unique private boolean reanimated$pushed = false;
 
     @Inject(method = "extractTabButton(Lnet/minecraft/client/gui/GuiGraphicsExtractor;IILnet/minecraft/world/item/CreativeModeTab;)V", at = @At("HEAD"))

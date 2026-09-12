@@ -7,6 +7,8 @@ import com.pycodder.reanimated.anim.AnimProfile;
 import com.pycodder.reanimated.anim.EasingType;
 import com.pycodder.reanimated.anim.LogoLetters;
 import com.pycodder.reanimated.anim.LogoStyle;
+import com.pycodder.reanimated.anim.ScreenOverride;
+import com.pycodder.reanimated.anim.TransitionStyle;
 import com.pycodder.reanimated.anim.UiPreset;
 import net.neoforged.fml.loading.FMLPaths;
 
@@ -16,11 +18,13 @@ import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-/** Mod configuration. */
 public class ReAnimatedConfig {
+
     public AnimProfile profile = new AnimProfile();
 
     public UiPreset uiPreset = UiPreset.DEFAULT;
+
+    public String customPresetId = "";
 
     public int animationSpeedTicks = 6;
 
@@ -64,6 +68,30 @@ public class ReAnimatedConfig {
     public UiPreset pausePreset = UiPreset.INHERIT;
     public float pauseDistance = 12f;
     public EasingType pauseEasing = EasingType.OUT_CUBIC;
+
+    public boolean transitionEnabled = true;
+    public TransitionStyle transitionStyle = TransitionStyle.SLIDE;
+    public int transitionSpeedTicks = 3;
+    public float transitionDistance = 24f;
+    public EasingType transitionEasing = EasingType.OUT_CUBIC;
+
+    public boolean tooltipEnabled = true;
+    public int tooltipDurationMs = 130;
+    public float tooltipScale = 0.92f;
+    public float tooltipOffsetY = 5f;
+    public EasingType tooltipEasing = EasingType.OUT_CUBIC;
+
+    public boolean recipeBookEnabled = true;
+    public int recipeBookDurationMs = 170;
+    public float recipeBookScale = 0.85f;
+    public float recipeBookOffsetX = 12f;
+    public EasingType recipeBookEasing = EasingType.OUT_CUBIC;
+
+    public boolean toastEnabled = true;
+    public int toastDurationMs = 380;
+    public EasingType toastEasing = EasingType.OUT_BACK;
+
+    public java.util.Map<String, ScreenOverride> screenOverrides = new java.util.LinkedHashMap<>();
 
     public boolean hoverEnabled = true;
     public float hoverScale = 0.07f;
@@ -163,6 +191,22 @@ public class ReAnimatedConfig {
         if (pausePreset == null) pausePreset = UiPreset.INHERIT;
         if (pauseEasing == null) pauseEasing = EasingType.OUT_CUBIC;
         if (uiPreset == UiPreset.INHERIT) uiPreset = UiPreset.DEFAULT;
+        if (transitionStyle == null) transitionStyle = TransitionStyle.SLIDE;
+        if (transitionEasing == null) transitionEasing = EasingType.OUT_CUBIC;
+        if (transitionSpeedTicks < 1) transitionSpeedTicks = 1;
+        if (tooltipEasing == null) tooltipEasing = EasingType.OUT_CUBIC;
+        if (tooltipDurationMs < 1) tooltipDurationMs = 1;
+        if (toastEasing == null) toastEasing = EasingType.OUT_BACK;
+        if (toastDurationMs < 1) toastDurationMs = 1;
+        if (recipeBookEasing == null) recipeBookEasing = EasingType.OUT_CUBIC;
+        if (recipeBookDurationMs < 1) recipeBookDurationMs = 1;
+        if (customPresetId == null) customPresetId = "";
+        if (screenOverrides == null) {
+            screenOverrides = new java.util.LinkedHashMap<>();
+        } else {
+            screenOverrides.values().removeIf(java.util.Objects::isNull);
+            screenOverrides.values().forEach(ScreenOverride::sanitize);
+        }
     }
 
     public String toShareString() {

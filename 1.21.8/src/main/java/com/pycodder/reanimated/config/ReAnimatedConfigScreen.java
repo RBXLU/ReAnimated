@@ -1,8 +1,12 @@
 package com.pycodder.reanimated.config;
 
 import com.pycodder.reanimated.anim.CascadeOrder;
+import com.pycodder.reanimated.api.CustomPreset;
+import com.pycodder.reanimated.api.ReAnimatedApi;
+import com.pycodder.reanimated.api.SettingsEntry;
 import com.pycodder.reanimated.anim.EasingType;
 import com.pycodder.reanimated.anim.LogoStyle;
+import com.pycodder.reanimated.anim.TransitionStyle;
 import com.pycodder.reanimated.anim.UiPreset;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -16,8 +20,8 @@ import net.minecraft.util.Util;
 import java.net.URI;
 import java.util.function.Consumer;
 
-/** Mod settings screen: sliders and toggles for each animation, plus a link to the author. */
 public class ReAnimatedConfigScreen extends GameOptionsScreen {
+
     private static final String AUTHOR_URL = "https://modrinth.com/user/pycodder";
     private static final String TESTED_URL = "https://github.com/RBXLU/ReAnimated/blob/main/testedmods.txt";
     private static final Text CREDIT = Text.literal("mod by @pycodder");
@@ -26,6 +30,7 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
     private static final Text STUDIO = Text.translatable("reanimated.opt.studio");
     private static final Text EXPORT = Text.translatable("reanimated.opt.export");
     private static final Text IMPORT = Text.translatable("reanimated.opt.import");
+    private static final Text SCREENS = Text.translatable("reanimated.opt.screens");
 
     private Text notice = null;
     private long noticeTime = 0L;
@@ -76,8 +81,12 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
             ButtonWidget.builder(IMPORT, b -> this.importSettings())
                 .dimensions(0, 0, 150, 20).build());
         this.body.addWidgetEntry(
+            ButtonWidget.builder(SCREENS, b -> this.client.setScreen(new ScreenRulesScreen(this)))
+                .dimensions(0, 0, 150, 20).build(),
             ButtonWidget.builder(TESTED, b -> Util.getOperatingSystem().open(URI.create(TESTED_URL)))
-                .dimensions(0, 0, 150, 20).build(), null);
+                .dimensions(0, 0, 150, 20).build());
+
+        reanimated$extensions();
 
         section("reanimated.section.general");
         this.body.addAll(
@@ -103,6 +112,32 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
             ticks("reanimated.opt.pause_speed_ticks", 1, 40, c.pauseSpeedTicks, v -> c.pauseSpeedTicks = v),
             slider("reanimated.opt.pause_distance", 0, 80, c.pauseDistance, " px", v -> c.pauseDistance = v.floatValue()),
             easing("reanimated.opt.pause_easing", c.pauseEasing, v -> c.pauseEasing = v)
+        );
+
+        section("reanimated.section.transitions");
+        this.body.addAll(
+            toggle("reanimated.opt.transition_enabled", c.transitionEnabled, v -> c.transitionEnabled = v),
+            transitionStyle("reanimated.opt.transition_style", c.transitionStyle, v -> c.transitionStyle = v),
+            ticks("reanimated.opt.transition_speed", 1, 20, c.transitionSpeedTicks, v -> c.transitionSpeedTicks = v),
+            slider("reanimated.opt.transition_distance", 0, 120, c.transitionDistance, " px", v -> c.transitionDistance = v.floatValue()),
+            easing("reanimated.opt.transition_easing", c.transitionEasing, v -> c.transitionEasing = v)
+        );
+
+        section("reanimated.section.popups");
+        this.body.addAll(
+            toggle("reanimated.opt.recipebook_enabled", c.recipeBookEnabled, v -> c.recipeBookEnabled = v),
+            intSlider("reanimated.opt.recipebook_duration", 30, 500, c.recipeBookDurationMs, " ms", v -> c.recipeBookDurationMs = v),
+            slider("reanimated.opt.recipebook_scale", 0.5, 1.0, c.recipeBookScale, "", v -> c.recipeBookScale = v.floatValue()),
+            slider("reanimated.opt.recipebook_offset", 0, 40, c.recipeBookOffsetX, " px", v -> c.recipeBookOffsetX = v.floatValue()),
+            easing("reanimated.opt.recipebook_easing", c.recipeBookEasing, v -> c.recipeBookEasing = v),
+            toggle("reanimated.opt.tooltip_enabled", c.tooltipEnabled, v -> c.tooltipEnabled = v),
+            intSlider("reanimated.opt.tooltip_duration", 30, 500, c.tooltipDurationMs, " ms", v -> c.tooltipDurationMs = v),
+            slider("reanimated.opt.tooltip_scale", 0.5, 1.0, c.tooltipScale, "", v -> c.tooltipScale = v.floatValue()),
+            slider("reanimated.opt.tooltip_offset", -20, 20, c.tooltipOffsetY, " px", v -> c.tooltipOffsetY = v.floatValue()),
+            easing("reanimated.opt.tooltip_easing", c.tooltipEasing, v -> c.tooltipEasing = v),
+            toggle("reanimated.opt.toast_enabled", c.toastEnabled, v -> c.toastEnabled = v),
+            intSlider("reanimated.opt.toast_duration", 100, 600, c.toastDurationMs, " ms", v -> c.toastDurationMs = v),
+            easing("reanimated.opt.toast_easing", c.toastEasing, v -> c.toastEasing = v)
         );
 
         section("reanimated.section.containers");
@@ -147,6 +182,64 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
         );
     }
 
+    private void reanimated$extensions() {
+        java.util.List<CustomPreset> presets = ReAnimatedApi.presets();
+        java.util.List<SettingsEntry> entries = ReAnimatedApi.settingsEntries();
+        if (presets.isEmpty() && entries.isEmpty()) return;
+
+        section("reanimated.section.extensions");
+        if (!presets.isEmpty()) {
+            this.body.addAll(extensionPreset(presets));
+        }
+        for (int i = 0; i < entries.size(); i += 2) {
+            SettingsEntry left = entries.get(i);
+            SettingsEntry right = i + 1 < entries.size() ? entries.get(i + 1) : null;
+            this.body.addWidgetEntry(extensionButton(left), right == null ? null : extensionButton(right));
+        }
+    }
+
+    private ButtonWidget extensionButton(SettingsEntry entry) {
+        return ButtonWidget.builder(Text.literal(entry.label()), b -> {
+            ReAnimatedApi.openEntry(entry, this);
+            if (this.client != null && this.client.currentScreen == this) {
+                this.clearAndInit();
+            }
+        }).dimensions(0, 0, 150, 20).build();
+    }
+
+    private SimpleOption<Integer> extensionPreset(java.util.List<CustomPreset> presets) {
+        ReAnimatedConfig c = ReAnimatedConfig.get();
+        int current = 0;
+        if (c.uiPreset == UiPreset.CUSTOM) {
+            for (int i = 0; i < presets.size(); i++) {
+                if (presets.get(i).id().equals(c.customPresetId)) {
+                    current = i + 1;
+                    break;
+                }
+            }
+        }
+        return new SimpleOption<>(
+            "reanimated.opt.custom_preset",
+            SimpleOption.emptyTooltip(),
+            (optionText, value) -> Text.translatable("reanimated.opt.custom_preset").append(Text.literal(": ")).append(
+                value <= 0 || value > presets.size()
+                    ? Text.translatable("reanimated.opt.custom_preset.off")
+                    : Text.literal(presets.get(value - 1).displayName())),
+            new SimpleOption.ValidatingIntSliderCallbacks(0, presets.size()),
+            current,
+            value -> {
+                if (value <= 0 || value > presets.size()) {
+                    if (c.uiPreset == UiPreset.CUSTOM) c.uiPreset = UiPreset.DEFAULT;
+                    c.customPresetId = "";
+                } else {
+                    c.uiPreset = UiPreset.CUSTOM;
+                    c.customPresetId = presets.get(value - 1).id();
+                }
+                c.save();
+            }
+        );
+    }
+
     private void section(String key) {
         net.minecraft.client.gui.widget.TextWidget t = new net.minecraft.client.gui.widget.TextWidget(
             Text.translatable(key).formatted(net.minecraft.util.Formatting.GOLD), this.textRenderer);
@@ -185,6 +278,22 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
             new SimpleOption.PotentialValuesBasedCallbacks<>(
                 java.util.Arrays.asList(LogoStyle.values()),
                 com.mojang.serialization.Codec.INT.xmap(i -> LogoStyle.values()[i], LogoStyle::ordinal)),
+            current,
+            value -> {
+                setter.accept(value);
+                ReAnimatedConfig.get().save();
+            }
+        );
+    }
+
+    private SimpleOption<TransitionStyle> transitionStyle(String key, TransitionStyle current, Consumer<TransitionStyle> setter) {
+        return new SimpleOption<>(
+            key,
+            SimpleOption.emptyTooltip(),
+            (optionText, value) -> Text.translatable(key).append(Text.literal(": " + value.display)),
+            new SimpleOption.PotentialValuesBasedCallbacks<>(
+                java.util.Arrays.asList(TransitionStyle.values()),
+                com.mojang.serialization.Codec.INT.xmap(i -> TransitionStyle.values()[i], TransitionStyle::ordinal)),
             current,
             value -> {
                 setter.accept(value);
@@ -265,10 +374,8 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
         return new SimpleOption<>(
             key,
             SimpleOption.emptyTooltip(),
-            // CyclingButtonWidget already prefixes the option name; returning it again
-            // rendered the button as "Animate: Animate: All UI".
-            (optionText, value) -> Text.translatable(
-                value ? "reanimated.opt.animate_scope.all" : "reanimated.opt.animate_scope.vanilla"),
+            (optionText, value) -> Text.translatable(key).append(Text.literal(": ")).append(
+                Text.translatable(value ? "reanimated.opt.animate_scope.all" : "reanimated.opt.animate_scope.vanilla")),
             new SimpleOption.PotentialValuesBasedCallbacks<>(
                 java.util.Arrays.asList(Boolean.TRUE, Boolean.FALSE),
                 com.mojang.serialization.Codec.BOOL),

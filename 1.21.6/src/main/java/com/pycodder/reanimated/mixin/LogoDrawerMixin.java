@@ -16,9 +16,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** "Minecraft" logo animation on the title screen (1.21.6–1.21.11 era: Matrix3x2fStack). */
 @Mixin(LogoDrawer.class)
 public class LogoDrawerMixin {
+
     @Unique private boolean reanimated$pushed = false;
 
     @Unique private static Identifier[] reanimated$letters;

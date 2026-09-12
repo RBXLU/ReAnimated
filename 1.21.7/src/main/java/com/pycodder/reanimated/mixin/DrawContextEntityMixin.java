@@ -8,33 +8,56 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
-/** The inventory player model, the one that follows the cursor, rides along with the panel. */
 @Mixin(DrawContext.class)
 public abstract class DrawContextEntityMixin {
+
     @Shadow public abstract Matrix3x2fStack getMatrices();
 
-    @ModifyVariable(method = "addEntity", at = @At("HEAD"), argsOnly = true, ordinal = 0)
-    private int reanimated$entityX1(int v) {
+    @ModifyVariable(method = {"addEntity",
+        "addPlayerSkin",
+        "addBookModel",
+        "addBannerResult",
+        "addSign",
+        "addProfilerChart"}, at = @At("HEAD"), argsOnly = true, ordinal = 0)
+    private int reanimated$pipX1(int v) {
         return reanimated$mapX(v);
     }
 
-    @ModifyVariable(method = "addEntity", at = @At("HEAD"), argsOnly = true, ordinal = 1)
-    private int reanimated$entityY1(int v) {
+    @ModifyVariable(method = {"addEntity",
+        "addPlayerSkin",
+        "addBookModel",
+        "addBannerResult",
+        "addSign",
+        "addProfilerChart"}, at = @At("HEAD"), argsOnly = true, ordinal = 1)
+    private int reanimated$pipY1(int v) {
         return reanimated$mapY(v);
     }
 
-    @ModifyVariable(method = "addEntity", at = @At("HEAD"), argsOnly = true, ordinal = 2)
-    private int reanimated$entityX2(int v) {
+    @ModifyVariable(method = {"addEntity",
+        "addPlayerSkin",
+        "addBookModel",
+        "addBannerResult",
+        "addSign",
+        "addProfilerChart"}, at = @At("HEAD"), argsOnly = true, ordinal = 2)
+    private int reanimated$pipX2(int v) {
         return reanimated$mapX(v);
     }
 
-    @ModifyVariable(method = "addEntity", at = @At("HEAD"), argsOnly = true, ordinal = 3)
-    private int reanimated$entityY2(int v) {
+    @ModifyVariable(method = {"addEntity",
+        "addPlayerSkin",
+        "addBookModel",
+        "addBannerResult",
+        "addSign",
+        "addProfilerChart"}, at = @At("HEAD"), argsOnly = true, ordinal = 3)
+    private int reanimated$pipY2(int v) {
         return reanimated$mapY(v);
     }
 
-    @ModifyVariable(method = "addEntity", at = @At("HEAD"), argsOnly = true, ordinal = 0)
-    private float reanimated$entityScale(float v) {
+    @ModifyVariable(method = {"addEntity",
+        "addPlayerSkin",
+        "addBookModel",
+        "addSign"}, at = @At("HEAD"), argsOnly = true, ordinal = 0)
+    private float reanimated$pipScale(float v) {
         Matrix3x2fStack m = getMatrices();
         float s = (m.m00() + m.m11()) * 0.5f;
         return s == 1f ? v : v * s;

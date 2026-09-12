@@ -1,6 +1,5 @@
 package com.pycodder.reanimated.anim;
 
-/** Easing functions used by the UI animations. */
 public final class Easing {
     private Easing() {}
 
@@ -27,6 +26,37 @@ public final class Easing {
         final float c3 = c1 + 1f;
         float f = t - 1f;
         return 1f + c3 * f * f * f + c1 * f * f;
+    }
+
+    public static float inOutCubic(float t) {
+        t = clamp01(t);
+        if (t < 0.5f) return 4f * t * t * t;
+        float f = -2f * t + 2f;
+        return 1f - f * f * f / 2f;
+    }
+
+    public static float outElastic(float t) {
+        t = clamp01(t);
+        if (t == 0f || t == 1f) return t;
+        final float c4 = (float) (2.0 * Math.PI / 3.0);
+        return (float) (Math.pow(2.0, -10.0 * t) * Math.sin((t * 10.0 - 0.75) * c4) + 1.0);
+    }
+
+    public static float outBounce(float t) {
+        t = clamp01(t);
+        final float n1 = 7.5625f;
+        final float d1 = 2.75f;
+        if (t < 1f / d1) {
+            return n1 * t * t;
+        } else if (t < 2f / d1) {
+            t -= 1.5f / d1;
+            return n1 * t * t + 0.75f;
+        } else if (t < 2.5f / d1) {
+            t -= 2.25f / d1;
+            return n1 * t * t + 0.9375f;
+        }
+        t -= 2.625f / d1;
+        return n1 * t * t + 0.984375f;
     }
 
     public static float press(float t) {

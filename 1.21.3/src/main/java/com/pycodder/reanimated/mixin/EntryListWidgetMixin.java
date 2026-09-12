@@ -14,9 +14,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Cascade of list rows: Mod Menu entries, servers, worlds, resource packs, data packs. */
 @Mixin(EntryListWidget.class)
 public abstract class EntryListWidgetMixin {
+
     @Shadow public abstract java.util.List<?> children();
 
     @Unique private static final int REANIMATED$MAX_SLOT = 14;
@@ -24,23 +24,27 @@ public abstract class EntryListWidgetMixin {
     @Unique private boolean reanimated$pushed = false;
 
     @Unique
+    private boolean reanimated$rowsAnimating() {
+        ReAnimatedConfig c = ReAnimatedConfig.get();
+        if (!c.listsEnabled || !c.profileLists.enabled) {
+            return false;
+        }
+        float e = Anim.elapsed(Anim.now());
+        if (e == Float.MAX_VALUE) {
+            return false;
+        }
+        return e * 1000f < c.profileLists.totalMs(REANIMATED$MAX_SLOT + 1);
+    }
+
+    @Unique
     private void reanimated$begin(DrawContext context, int index) {
         reanimated$pushed = false;
-        ReAnimatedConfig c = ReAnimatedConfig.get();
-        if (!c.listsEnabled) {
-            return;
-        }
-        AnimProfile p = c.profileLists;
-        if (!p.enabled) {
-            return;
-        }
         if (!Anim.shouldAnimate(MinecraftClient.getInstance().currentScreen)) {
             return;
         }
-        float e = Anim.elapsed(System.currentTimeMillis());
-        if (e == Float.MAX_VALUE) {
-            return;
-        }
+        ReAnimatedConfig c = ReAnimatedConfig.get();
+        AnimProfile p = c.profileLists;
+        float e = Anim.elapsed(Anim.now());
         int count = Math.max(1, this.children().size());
         int rank = Math.max(0, index);
         int slot = Math.min(p.slotFor(rank, count), REANIMATED$MAX_SLOT);
@@ -68,6 +72,10 @@ public abstract class EntryListWidgetMixin {
     private void reanimated$rowHead(DrawContext context, int mouseX, int mouseY, float delta,
                                     int index, int x, int y, int entryWidth, int entryHeight,
                                     CallbackInfo ci) {
+        if (!reanimated$rowsAnimating()) {
+            reanimated$pushed = false;
+            return;
+        }
         reanimated$begin(context, index);
     }
 

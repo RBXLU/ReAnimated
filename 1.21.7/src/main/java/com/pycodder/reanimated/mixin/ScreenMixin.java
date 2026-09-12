@@ -1,6 +1,8 @@
 package com.pycodder.reanimated.mixin;
 
 import com.pycodder.reanimated.anim.Anim;
+import com.pycodder.reanimated.anim.ScreenNav;
+import com.pycodder.reanimated.anim.ScreenRules;
 import com.pycodder.reanimated.anim.CascadeTarget;
 import com.pycodder.reanimated.anim.UiTransform;
 import net.minecraft.client.MinecraftClient;
@@ -22,9 +24,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Base open animation for any screen (the SCREEN layer: preset). */
 @Mixin(value = Screen.class, priority = 1500)
 public abstract class ScreenMixin {
+
     @Shadow public int width;
     @Shadow public int height;
 
@@ -32,10 +34,14 @@ public abstract class ScreenMixin {
     @Unique private boolean reanimated$fwdPushed = false;
     @Unique private boolean reanimated$bgPushed = false;
     @Unique private int reanimated$pauseFlag = -1;
+    @Unique private int reanimated$enterDir = 0;
 
     @Inject(method = "init(Lnet/minecraft/client/MinecraftClient;II)V", at = @At("TAIL"))
     private void reanimated$onInit(MinecraftClient client, int width, int height, CallbackInfo ci) {
         reanimated$openTime = System.currentTimeMillis();
+        reanimated$enterDir = reanimated$isContainer() ? 0 : Anim.takeEnterDir();
+        ScreenRules.remember(this);
+        Anim.onScreenOpened(this);
         reanimated$assignCascade();
     }
 
@@ -75,9 +81,15 @@ public abstract class ScreenMixin {
 
     @Inject(method = "renderWithTooltip", at = @At("HEAD"))
     private void reanimated$wrapHead(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        Anim.beginFrame();
         Anim.currentOpenTime = reanimated$openTime;
         Anim.currentIsPause = reanimated$isPause();
+        Anim.currentOverride = ScreenRules.get(this);
+        Anim.currentEnterDir = reanimated$enterDir;
+        Anim.currentScreen = this;
+        Anim.currentIsContainer = reanimated$isContainer();
         boolean container = reanimated$isContainer();
+        UiTransform.saveBase(context.getMatrices());
         reanimated$fwdPushed = Anim.transformActive(container) && Anim.shouldAnimate(this);
         if (reanimated$fwdPushed) {
             Matrix3x2fStack m = context.getMatrices();
@@ -91,6 +103,7 @@ public abstract class ScreenMixin {
         if (reanimated$fwdPushed) {
             context.getMatrices().popMatrix();
         }
+        Anim.endFrame();
         reanimated$maybeFinishClose();
     }
 
@@ -98,26 +111,30 @@ public abstract class ScreenMixin {
     private void reanimated$maybeFinishClose() {
         if (!Anim.isClosing()) return;
         if (!Anim.closeFinished(reanimated$isContainer())) return;
+        Object next = Anim.pendingScreen;
         Anim.finishClose();
         Anim.bypassClose = true;
-        MinecraftClient.getInstance().setScreen(null);
+        MinecraftClient.getInstance().setScreen(next instanceof Screen s ? s : null);
         Anim.bypassClose = false;
+        if (next == null) {
+            ScreenNav.clear();
+            Anim.clearEnterDir();
+        }
     }
 
     @Inject(method = "renderBackground", at = @At("HEAD"))
     private void reanimated$bgHead(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+
         reanimated$bgPushed = !reanimated$isContainer() && Anim.transformActive(false) && Anim.shouldAnimate(this);
         if (reanimated$bgPushed) {
-            Matrix3x2fStack m = context.getMatrices();
-            m.pushMatrix();
-            UiTransform.inverse(m, this.width, this.height, false);
+            reanimated$bgPushed = UiTransform.pushBase(context.getMatrices());
         }
     }
 
     @Inject(method = "renderBackground", at = @At("RETURN"))
     private void reanimated$bgTail(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if (reanimated$bgPushed) {
-            context.getMatrices().popMatrix();
+            UiTransform.popBase(context.getMatrices());
         }
     }
 

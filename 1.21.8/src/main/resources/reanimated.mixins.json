@@ -7,11 +7,15 @@
     "ClickableWidgetMixin",
     "EntryListWidgetMixin",
     "HandledScreenMixin",
+    "RecipeBookWidgetMixin",
     "LogoDrawerMixin",
     "AdvancementTabMixin",
     "CreativeInventoryScreenMixin",
     "MinecraftClientMixin",
-    "DrawContextEntityMixin"
+    "DrawContextEntityMixin",
+    "DrawContextTooltipMixin",
+    "ToastEntryMixin",
+    "compat.EmiStackBatcherMixin"
   ],
   "injectors": {
     "defaultRequire": 1

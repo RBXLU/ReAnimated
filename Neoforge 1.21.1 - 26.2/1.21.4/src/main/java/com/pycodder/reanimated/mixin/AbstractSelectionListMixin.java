@@ -14,14 +14,27 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Cascade of list rows: Mod Menu entries, servers, worlds, resource packs, data packs. */
 @Mixin(AbstractSelectionList.class)
 public abstract class AbstractSelectionListMixin {
+
     @Shadow public abstract java.util.List<?> children();
 
     @Unique private static final int REANIMATED$MAX_SLOT = 14;
 
     @Unique private boolean reanimated$pushed = false;
+
+    @Unique
+    private boolean reanimated$rowsAnimating() {
+        ReAnimatedConfig c = ReAnimatedConfig.get();
+        if (!c.listsEnabled || !c.profileLists.enabled) {
+            return false;
+        }
+        float e = Anim.elapsed(Anim.now());
+        if (e == Float.MAX_VALUE) {
+            return false;
+        }
+        return e * 1000f < c.profileLists.totalMs(REANIMATED$MAX_SLOT + 1);
+    }
 
     @Unique
     private void reanimated$begin(GuiGraphics context, int index) {
@@ -67,6 +80,10 @@ public abstract class AbstractSelectionListMixin {
     private void reanimated$rowHead(GuiGraphics context, int mouseX, int mouseY, float delta,
                                     int index, int x, int y, int entryWidth, int entryHeight,
                                     CallbackInfo ci) {
+        if (!reanimated$rowsAnimating()) {
+            reanimated$pushed = false;
+            return;
+        }
         reanimated$begin(context, index);
     }
 

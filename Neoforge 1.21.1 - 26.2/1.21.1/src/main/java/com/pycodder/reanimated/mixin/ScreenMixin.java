@@ -2,6 +2,8 @@ package com.pycodder.reanimated.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.pycodder.reanimated.anim.Anim;
+import com.pycodder.reanimated.anim.ScreenNav;
+import com.pycodder.reanimated.anim.ScreenRules;
 import com.pycodder.reanimated.anim.OwnTransform;
 import com.pycodder.reanimated.anim.CascadeTarget;
 import com.pycodder.reanimated.anim.UiTransform;
@@ -23,9 +25,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Base open animation for any screen: the SCREEN layer (preset). */
 @Mixin(value = Screen.class, priority = 1500)
 public abstract class ScreenMixin {
+
     @Shadow public int width;
     @Shadow public int height;
 
@@ -33,6 +35,7 @@ public abstract class ScreenMixin {
     @Unique private boolean reanimated$fwdPushed = false;
     @Unique private boolean reanimated$bgPushed = false;
     @Unique private int reanimated$pauseFlag = -1;
+    @Unique private int reanimated$enterDir = 0;
     @Unique private int reanimated$lastW = -1;
     @Unique private int reanimated$lastH = -1;
 
@@ -72,8 +75,12 @@ public abstract class ScreenMixin {
 
     @Inject(method = "renderWithTooltip", at = @At("HEAD"))
     private void reanimated$wrapHead(GuiGraphics graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        Anim.beginFrame();
         if (reanimated$openTime == 0L) {
             reanimated$openTime = System.currentTimeMillis();
+            reanimated$enterDir = reanimated$isContainer() ? 0 : Anim.takeEnterDir();
+            ScreenRules.remember(this);
+            Anim.onScreenOpened(this);
         }
         if (this.width != reanimated$lastW || this.height != reanimated$lastH) {
             reanimated$lastW = this.width;
@@ -83,7 +90,12 @@ public abstract class ScreenMixin {
         OwnTransform.reset();
         Anim.currentOpenTime = reanimated$openTime;
         Anim.currentIsPause = reanimated$isPause();
+        Anim.currentOverride = ScreenRules.get(this);
+        Anim.currentEnterDir = reanimated$enterDir;
+        Anim.currentScreen = this;
+        Anim.currentIsContainer = reanimated$isContainer();
         boolean container = reanimated$isContainer();
+        UiTransform.saveBase(graphics.pose());
         reanimated$fwdPushed = Anim.transformActive(container) && Anim.shouldAnimate(this);
         if (reanimated$fwdPushed) {
             PoseStack m = graphics.pose();
@@ -98,6 +110,7 @@ public abstract class ScreenMixin {
             graphics.pose().popPose();
             OwnTransform.pop();
         }
+        Anim.endFrame();
         reanimated$maybeFinishClose();
     }
 
@@ -105,26 +118,29 @@ public abstract class ScreenMixin {
     private void reanimated$maybeFinishClose() {
         if (!Anim.isClosing()) return;
         if (!Anim.closeFinished(reanimated$isContainer())) return;
+        Object next = Anim.pendingScreen;
         Anim.finishClose();
         Anim.bypassClose = true;
-        Minecraft.getInstance().setScreen(null);
+        Minecraft.getInstance().setScreen(next instanceof Screen s ? s : null);
         Anim.bypassClose = false;
+        if (next == null) {
+            ScreenNav.clear();
+            Anim.clearEnterDir();
+        }
     }
 
     @Inject(method = "renderBackground", at = @At("HEAD"))
     private void reanimated$bgHead(GuiGraphics graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         reanimated$bgPushed = !reanimated$isContainer() && Anim.transformActive(false) && Anim.shouldAnimate(this);
         if (reanimated$bgPushed) {
-            PoseStack m = graphics.pose();
-            m.pushPose();
-            UiTransform.inverse(m, this.width, this.height, false);
+            reanimated$bgPushed = UiTransform.pushBase(graphics.pose());
         }
     }
 
     @Inject(method = "renderBackground", at = @At("RETURN"))
     private void reanimated$bgTail(GuiGraphics graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if (reanimated$bgPushed) {
-            graphics.pose().popPose();
+            UiTransform.popBase(graphics.pose());
             OwnTransform.pop();
         }
     }
