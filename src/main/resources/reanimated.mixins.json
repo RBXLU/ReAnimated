@@ -1,0 +1,25 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.pycodder.reanimated.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "ScreenMixin",
+    "ScreenBackgroundMixin",
+    "ClickableWidgetMixin",
+    "AbstractSelectionListMixin",
+    "PressableWidgetMixin",
+    "HandledScreenMixin",
+    "RecipeBookWidgetMixin",
+    "LogoDrawerMixin",
+    "AdvancementTabMixin",
+    "CreativeInventoryScreenMixin",
+    "MinecraftClientMixin",
+    "DrawContextTooltipMixin",
+    "ToastEntryMixin",
+    "compat.EmiStackBatcherMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
