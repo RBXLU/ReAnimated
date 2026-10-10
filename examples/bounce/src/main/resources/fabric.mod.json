@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "reanimated_bounce",
+  "version": "${version}",
+  "name": "ReAnimated: Bounce",
+  "description": "Пример расширения для ReAnimated: своя анимация «прыжок» и кнопка её выключения в настройках мода.",
+  "authors": ["pycodder"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.pycodder.reanimated.example.bounce.BounceClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.5",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "reanimated": "*"
+  }
+}

@@ -1,0 +1,29 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MIT"
+issueTrackerURL = "https://modrinth.com/user/pycodder"
+
+[[mods]]
+modId = "reanimated"
+version = "${version}"
+displayName = "ReAnimated"
+authors = "pycodder"
+logoFile = "icon.png"
+description = '''${description}'''
+
+[[mixins]]
+config = "reanimated.mixins.json"
+
+[[dependencies.reanimated]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.8.0,)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.reanimated]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.8,1.21.9)"
+ordering = "NONE"
+side = "CLIENT"

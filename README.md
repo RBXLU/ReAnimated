@@ -1,0 +1,209 @@
+<p align="center">
+<img src="https://raw.githubusercontent.com/RBXLU/devReAnimated/main/docs/images/hero.png" alt="ReAnimated — smooth animations for the entire Minecraft UI" width="100%">
+</p>
+
+# ReAnimated
+[![Available for Fabric](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/supported/fabric_vector.svg)](https://fabricmc.net/)
+[![Requires FabricAPI](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3.3.1/assets/cozy/requires/fabric-api_vector.svg)](https://modrinth.com/mod/fabric-api)
+[![Available for Quilt](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/supported/quilt_vector.svg)](https://quiltmc.org/)
+[![Available for NeoForge](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/supported/neoforge_vector.svg)](https://neoforged.net/)
+[![Available on Modrinth](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/available/modrinth_vector.svg)](https://modrinth.com/mod/re-animated)
+[![Available on CurseForge](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/available/curseforge_vector.svg)](https://www.curseforge.com/minecraft/mc-mods/reanimated)
+
+**Smooth animations for the entire Minecraft UI.** Menus, buttons, containers and the inventory slide, scale and follow your cursor — without changing how the game plays.
+
+Vanilla menus just pop in and out with no transition, and after a while that started to bug me. So I made ReAnimated — a client-side mod that adds smooth **open and close** animations to the whole UI. It doesn't touch gameplay in any way, it's purely visual, and it's fine to run on any server.
+
+![icon](https://cdn.modrinth.com/data/cached_images/18ae1c5f86365aa33567ff4a18d1095a2d94bb5a.png)
+
+## ✨ Features
+
+Open a menu — the main menu, your inventory, a chest, a furnace, doesn't matter — and the panel eases into place instead of snapping. Close it and the same motion plays in reverse.
+
+- **Menus open (and close) smoothly** — titles **and** buttons slide up together from below, then reverse on close. Works on the main menu, Singleplayer, Multiplayer, Settings and every other screen automatically.
+- **Containers slide up** — furnaces, chests, barrels, the inventory and any other container panel ease in from the bottom.
+- **Animated logo, two styles** — the *Minecraft* logo either **grows in** with a soft bounce, or assembles **letter by letter** in a cascade. Pick the one you like.
+- **Tabs slide out** — the category tabs in **Advancements** and the **Creative** inventory slide out from behind the panel, one after another: top tabs rise from below, bottom tabs drop from above.
+- **Following slot highlight** — the inventory slot highlight glides after your cursor instead of snapping between slots.
+- **Button hover scaling** — buttons gently grow when hovered and ease back when you move away.
+- **Buttons press in** — clicking a button (or pressing Enter on it) dips it inward and springs it back.
+- **Background dimming fades in** — the dim behind a screen builds up along with the panel instead of snapping on.
+- **Lists animate too** — the mod list in Mod Menu, servers, worlds and resource packs travel with the screen, and their rows arrive one after another.
+- **Screens hand over to each other** — opening Settings from the main menu slides the old screen out and brings the new one in from the other side; going back plays it in reverse. Slide, zoom, or both.
+- **Tooltips grow in** — a tooltip eases out of the cursor instead of blinking into place. Works for item tooltips and for tooltips added by other mods.
+- **Toasts slide on your curve** — advancement, recipe and system notifications keep vanilla's timing but travel along the trajectory you pick, with a little overshoot if you want one.
+
+### Presets & your own animations
+Every screen animates through a preset you choose:
+
+- **Default** — slides up from the bottom
+- **Slide down / from left / from right** — the same entrance from the other three sides
+- **From background** — grows out of the center with a little bounce
+- **From foreground** — flies in and settles down to normal size
+- **Pop** — jumps out of a point with a strong overshoot
+- **None** — turns the movement off but keeps the rest
+
+Other mods can add presets of their own through the [extension API](API.md) — they appear in the settings next to the built-in ones.
+
+Want something specific? Open the **Animation Studio** or the **Profile Editor** built into the settings — live sliders, ready-made starting points, an easing-curve graph and a live preview, so you can dial in your own open/close animation.
+
+## ⚙️ Configuration
+
+Open **Options → Video Settings → `ReAnimated settings`**, or through **Mod Menu** if you have it.
+
+**Running Sodium 0.8+?** ReAnimated gets its own entry inside Sodium's settings screen — real pages in the list on the left, drawn with Sodium's own controls and covered by its search. On older Sodium, VulkanMod or Iris a button appears in their screen instead.
+
+The settings are grouped into sections — **General · Menu screens · Pause menu · Screen transitions · Containers · Cursor · Tooltips & toasts · Logo · Tabs** — and every animation can be tuned independently:
+
+- **The pause menu has its own settings** — speed, distance, trajectory and preset, separate from other menus
+- **Per-screen settings** — give one screen its own preset or speed, or switch its animation off entirely; screens show up in the list once you have opened them
+- **Export / Import** — copy your whole configuration to the clipboard and paste it into another instance, or share it
+- **Animate lists** — row-by-row appearance for the mod list, servers, worlds and resource packs (can be switched off)
+- **Enable / disable** each animation
+- **Duration** (how fast) and **slide distance / depth**
+- **Trajectory / easing** — *Linear*, *Out Cubic*, *Out Back (bounce)*, *Out Expo* and more
+- Cascade delay & direction, hover scale amount & speed, slot-highlight speed, logo style, and more
+
+Settings are saved to `config/reanimated.json` and apply instantly.
+
+## 📦 Requirements
+
+- **Fabric** or **Quilt**, plus **[Fabric API](https://modrinth.com/mod/fabric-api)** — Minecraft **1.21.1 – 1.21.11**, **26.1.2**, **26.2**, **26.3**
+- or **NeoForge** — Minecraft **1.21.1**, **1.21.3 – 1.21.5**, **1.21.8**, **1.21.10**, **1.21.11**
+
+Client-side only — not required on servers, and players without it won't notice anything different. Compatible with **Sodium**, **Iris** and other rendering mods (ReAnimated only touches GUI classes), **[Blur+](https://modrinth.com/mod/blur-plus)** (the blurred background fades out together with the closing panel) and **[Smooth Scrolling](https://modrinth.com/mod/smooth-scroll)** (the slot highlight scrolls along with the items).
+
+### Supported versions
+There's a separate download for each Minecraft version. The GUI rendering changed a fair amount across 1.21.x and again in 26.x, so every version has its own build made against it — grab the one that matches your game exactly.
+
+**NeoForge:** same features and, since **1.7.1**, the same version number as Fabric. The only Fabric-only piece is the mod's page inside Sodium's settings screen.
+
+> Each file is pinned to one Minecraft version — pick the one that matches your game. The mod version looks like `<Minecraft version>+<mod version>`, e.g. `1.21.1+1.7.1`.
+
+---
+
+Made with ❤️ by **[@pycodder](https://modrinth.com/user/pycodder)**
+
+<details>
+<summary>🇷🇺 Описание на русском</summary>
+
+**Плавные анимации для всего интерфейса Minecraft.** Меню, кнопки, контейнеры и инвентарь плавно выезжают, увеличиваются и следуют за курсором — не влияя на игровой процесс.
+
+Ванильные меню просто появляются и исчезают без всякого перехода, и меня это со временем начало раздражать. Поэтому я сделал ReAnimated — клиентский мод, который добавляет плавные анимации **открытия и закрытия** для всего интерфейса. На геймплей никак не влияет, чисто визуально, и спокойно работает на любом сервере.
+
+### Возможности
+
+Открываете меню — главное меню, инвентарь, сундук, печку, что угодно — и панель плавно въезжает на место, а не появляется рывком. Закрываете — то же движение проигрывается в обратную сторону.
+
+- **Меню открываются и закрываются плавно** — заголовки **и** кнопки выезжают снизу вместе, на закрытии — в обратную сторону. Работает на всех экранах автоматически.
+- **Контейнеры выезжают** — печка, сундук, инвентарь и любой другой контейнер плавно появляются снизу.
+- **Анимация логотипа, два стиля** — логотип *Minecraft* либо **вырастает** с мягким отскоком, либо собирается **по буквам** каскадом. Выбираешь сам.
+- **Вкладки выезжают** — вкладки категорий в **достижениях** и **креативном** инвентаре выезжают из-за панели по очереди: верхние поднимаются снизу, нижние опускаются сверху.
+- **Подсветка слота** плавно следует за курсором по инвентарю.
+- **Кнопки вдавливаются** — нажатие мышью или Enter'ом проседает кнопку и упруго возвращает её.
+- **Затемнение фона появляется плавно** — вместе с панелью, а не мгновенно.
+- **Списки тоже анимируются** — список модов в Mod Menu, сервера, миры и ресурспаки едут вместе с экраном, строки появляются по очереди.
+- **Экраны передают друг другу эстафету** — открываете настройки из главного меню, и старый экран уезжает в сторону, а новый приходит с противоположной; на возврате — в обратную сторону. Сдвиг, масштаб или всё сразу.
+- **Подсказки вырастают** — подсказка плавно появляется у курсора, а не возникает рывком. Работает и для подсказок предметов, и для подсказок из других модов.
+- **Уведомления выезжают по вашей кривой** — достижения, рецепты и системные сообщения сохраняют ванильные тайминги, но двигаются по выбранной траектории, с отскоком, если он нужен.
+- **Увеличение кнопок при наведении** — кнопки мягко растут под курсором и возвращаются обратно.
+
+### Пресеты и свои анимации
+Каждый экран анимируется выбранным пресетом:
+
+- **Default** — выезжает снизу
+- **Выезд сверху / слева / справа** — то же появление с трёх других сторон
+- **From background** — вырастает из центра с лёгким отскоком
+- **From foreground** — влетает и уменьшается до нормального размера
+- **Pop** — выскакивает из точки с сильным отскоком
+- **None** — движение выключено, остальное работает
+
+Другие моды могут добавлять свои пресеты через [API расширений](API.md) — они появляются в настройках рядом со встроенными.
+
+Нужно что-то своё? В настройках есть **Студия анимаций** и **Редактор профиля** — живые ползунки, готовые пресеты, график easing и живое превью, чтобы собрать свою анимацию открытия/закрытия.
+
+### Настройки
+
+Настройки → Настройки графики → «Настройки ReAnimated», или через **Mod Menu**.
+
+**Стоит Sodium 0.8+?** ReAnimated появится отдельным пунктом внутри экрана Sodium — своими страницами в списке слева, его же элементами управления и с его поиском. На старом Sodium, VulkanMod или Iris вместо этого добавляется кнопка в их экран. Настройки разбиты на секции — **Общее · Экраны меню · Меню паузы · Переходы · Контейнеры · Курсор · Подсказки и уведомления · Логотип · Вкладки** — у каждой анимации свой переключатель, ползунки длительности, дистанции/глубины и траектории. У меню паузы свой набор настроек (скорость, дистанция, траектория, пресет), а кнопки **Копировать/Вставить** переносят всю конфигурацию через буфер обмена. Отдельным экраном настраиваются **отдельные экраны**: своя анимация, своя скорость или её отсутствие для конкретного меню (экран появляется в списке после того, как вы его открыли). Всё сохраняется в `config/reanimated.json` и применяется сразу.
+
+### Поддержка
+
+Fabric / Quilt + Fabric API — Minecraft **1.21.1 – 1.21.11**, **26.1.2**, **26.2**, **26.3**; NeoForge — **1.21.1**, **1.21.3 – 1.21.5**, **1.21.8**, **1.21.10**, **1.21.11**. Для каждой версии — отдельная сборка (рендеринг интерфейса заметно менялся между версиями), бери ровно под свою игру.
+
+**NeoForge:** возможности те же, а с **1.7.1** — и тот же номер версии, что у Fabric. Только на Fabric остаётся страница мода внутри экрана настроек Sodium.
+
+Дружит с **Sodium**, **Iris**, **[Blur+](https://modrinth.com/mod/blur-plus)** (размытый фон гаснет вместе с закрывающейся панелью) и **[Smooth Scrolling](https://modrinth.com/mod/smooth-scroll)** (подсветка слота прокручивается вместе с предметами).
+
+### Благодарности
+
+**Побуквенный каскад логотипа** (идея + текстуры букв) и идея **каскада вкладок** — из мода [**EaseGUI**](https://github.com/Weyne1/EaseGUI) (Weyne1), под лицензией **LGPL-3.0**. Полная атрибуция — в [`CREDITS.md`](CREDITS.md) и папке [`licenses/`](licenses/).
+
+</details>
+=======
+A client-side mod for **Minecraft 1.21.1 (Fabric)** that adds smooth animations to the entire game interface. Pure cosmetics — not required on servers, doesn't affect gameplay.
+
+## What gets animated
+
+| # | Where | What it does |
+|---|-------|-------------|
+| 1 | Main menu | The "Minecraft" logo smoothly "grows in" with a slight bounce; buttons emerge from depth with a fade-in and upward shift, one after another. |
+| 2 | Singleplayer | All buttons and the world list are animated (shared button + list system). |
+| 3 | Multiplayer | Saved servers smoothly slide up one by one. |
+| 4 | Options | All buttons and settings rows are animated. |
+| 5 | Furnaces / chests / any container | The whole interface smoothly slides up when opened. |
+| 6 | Inventory | The slot highlight (gray fill) smoothly follows the cursor; the inventory itself slides up. |
+| 7 | Any button | On hover it smoothly scales up a little, and smoothly returns when the cursor leaves. |
+
+Animations apply to **all** Minecraft screens and buttons automatically — not just the ones listed — because the mod hooks into the base interface classes (`Screen`, `ClickableWidget`, `HandledScreen`, `EntryListWidget`, `LogoDrawer`) rather than each screen individually.
+
+## Installation
+
+1. Install [Fabric Loader](https://fabricmc.net/use/installer/) for 1.21.1.
+2. Place the following into your `mods` folder:
+   - `reanimated-1.0.0.jar` (from `build/libs/`)
+   - [Fabric API](https://modrinth.com/mod/fabric-api) for 1.21.1
+3. Launch the game with the Fabric 1.21.1 profile.
+
+## Building from source
+
+Building requires **JDK 21** (Minecraft 1.21.1 specifically requires it, and Fabric Loom requires Gradle itself to run on Java 21, not just the toolchain).
+
+```bash
+# Linux/macOS
+JAVA_HOME=/path/to/jdk-21 ./gradlew build
+
+# Windows
+set JAVA_HOME=C:\path\to\jdk-21
+gradlew.bat build
+```
+
+The built mod will appear at `build/libs/reanimated-1.0.0.jar`.
+
+To run a test client straight from the project:
+
+```bash
+JAVA_HOME=/path/to/jdk-21 ./gradlew runClient
+```
+
+## Tuning animation speed
+
+All durations, distances, and speeds are consolidated into a single file — [`Anim.java`](src/main/java/com/pycodder/reanimated/anim/Anim.java). Change the constants (e.g. `WIDGET_HOVER_SCALE`, `CONTAINER_SLIDE`, `LOGO_DURATION`) and rebuild.
+
+## Structure
+
+```
+src/main/java/com/pycodder/reanimated/
+├── ReAnimatedClient.java         — entry point
+├── anim/
+│   ├── Anim.java                 — shared parameters and per-frame state
+│   └── Easing.java               — easing functions
+└── mixin/
+    ├── ScreenMixin.java          — screen-open moment (items 1–4)
+    ├── ClickableWidgetMixin.java — button appearance + scaling (items 1–4, 7)
+    ├── HandledScreenMixin.java   — container slide-in + slot highlight (items 5, 6)
+    ├── LogoDrawerMixin.java      — logo animation (item 1)
+    └── EntryListWidgetMixin.java — list-entry slide-in (items 3, 4)
+```
+ main

@@ -1,0 +1,445 @@
+package com.pycodder.reanimated.config;
+
+import com.pycodder.reanimated.anim.CascadeOrder;
+import com.pycodder.reanimated.api.CustomPreset;
+import com.pycodder.reanimated.api.ReAnimatedApi;
+import com.pycodder.reanimated.api.SettingsEntry;
+import com.pycodder.reanimated.anim.EasingType;
+import com.pycodder.reanimated.anim.LogoStyle;
+import com.pycodder.reanimated.anim.TransitionStyle;
+import com.pycodder.reanimated.anim.UiPreset;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractSliderButton;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.ConfirmLinkScreen;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
+import java.util.function.DoubleConsumer;
+import java.util.function.IntConsumer;
+import java.util.function.Supplier;
+
+public class ReAnimatedConfigScreen extends Screen {
+
+    private static final String AUTHOR_URL = "https://modrinth.com/user/pycodder";
+    private static final String TESTED_URL = "https://github.com/RBXLU/ReAnimated/blob/main/testedmods.txt";
+
+    private static final String[] TABS = {
+        "reanimated.tab.general",
+        "reanimated.tab.menu",
+        "reanimated.tab.pause",
+        "reanimated.tab.containers",
+        "reanimated.tab.cursor",
+        "reanimated.tab.logo",
+        "reanimated.tab.tabs",
+        "reanimated.tab.transitions",
+        "reanimated.tab.popups",
+    };
+
+    private static final int SIDE = 12;
+    private static final int TABS_TOP = 38;
+    private static final int TAB_ROW_H = 22;
+    private static final int TAB_GAP = 6;
+    private static final int TAB_MIN_W = 70;
+    private static final int TAB_MAX_W = 110;
+    private static final int COL_GAP = 12;
+    private static final int COL_MAX_W = 240;
+    private static final int[][] GRIDS = {
+        {2, 20, 3}, {2, 20, 2}, {2, 18, 2}, {3, 20, 3}, {3, 18, 2}, {3, 16, 1},
+    };
+
+    private final Screen parent;
+    private net.minecraft.network.chat.Component notice = null;
+    private long noticeTime = 0L;
+    private static final long NOTICE_MS = 4000L;
+    private static int section = 0;
+
+    public ReAnimatedConfigScreen(Screen parent) {
+        super(Component.translatable("reanimated.config.title"));
+        this.parent = parent;
+    }
+
+    @Override
+    protected void init() {
+        ReAnimatedConfig c = ReAnimatedConfig.get();
+
+        Component author = Component.literal("mod by @pycodder");
+        Component tested = Component.translatable("reanimated.opt.tested_mods");
+        int authorW = this.font.width(author) + 10;
+        int testedW = this.font.width(tested) + 10;
+        addRenderableWidget(Button.builder(author,
+                        b -> ConfirmLinkScreen.confirmLinkNow(this, AUTHOR_URL))
+                .bounds(4, 4, authorW, 16).build());
+        addRenderableWidget(Button.builder(tested,
+                        b -> ConfirmLinkScreen.confirmLinkNow(this, TESTED_URL))
+                .bounds(this.width - 4 - testedW, 4, testedW, 16).build());
+
+        int tabCols = Math.max(2, Math.min(4, (this.width - 2 * SIDE + TAB_GAP) / (TAB_MIN_W + TAB_GAP)));
+        int tabW = Math.min(TAB_MAX_W, (this.width - 2 * SIDE - (tabCols - 1) * TAB_GAP) / tabCols);
+        int tabRows = (TABS.length + tabCols - 1) / tabCols;
+        for (int i = 0; i < TABS.length; i++) {
+            int row = i / tabCols;
+            int col = i % tabCols;
+            int inRow = Math.min(tabCols, TABS.length - row * tabCols);
+            int rowW = inRow * tabW + (inRow - 1) * TAB_GAP;
+            int idx = i;
+            Button b = Button.builder(tabLabel(i), btn -> {
+                section = idx;
+                rebuildWidgets();
+            }).bounds((this.width - rowW) / 2 + col * (tabW + TAB_GAP),
+                    TABS_TOP + row * TAB_ROW_H, tabW, 20).build();
+            b.active = (i != section);
+            addRenderableWidget(b);
+        }
+
+        List<AbstractWidget> rows = new ArrayList<>();
+        switch (section) {
+            case 1 -> {
+                rows.add(toggle("reanimated.opt.screen_enabled", () -> c.screenOpenEnabled, v -> c.screenOpenEnabled = v));
+                rows.add(slider("reanimated.opt.screen_distance", 0, 80, c.screenOpenDistance, " px", v -> c.screenOpenDistance = (float) v));
+                rows.add(easing("reanimated.opt.screen_easing", () -> c.screenOpenEasing, v -> c.screenOpenEasing = v));
+            }
+            case 2 -> {
+                rows.add(toggle("reanimated.opt.pause_enabled", () -> c.pauseEnabled, v -> c.pauseEnabled = v));
+                rows.add(cycler("reanimated.opt.pause_preset", () -> c.pausePreset, v -> c.pausePreset = v,
+                        UiPreset.values(), p -> p.display));
+                rows.add(intSlider("reanimated.opt.pause_speed_ticks", 1, 40, c.pauseSpeedTicks, " t", v -> c.pauseSpeedTicks = v));
+                rows.add(slider("reanimated.opt.pause_distance", 0, 80, c.pauseDistance, " px", v -> c.pauseDistance = (float) v));
+                rows.add(easing("reanimated.opt.pause_easing", () -> c.pauseEasing, v -> c.pauseEasing = v));
+            }
+            case 3 -> {
+                rows.add(toggle("reanimated.opt.container_enabled", () -> c.containerEnabled, v -> c.containerEnabled = v));
+                rows.add(slider("reanimated.opt.container_distance", 0, 120, c.containerDistance, " px", v -> c.containerDistance = (float) v));
+                rows.add(easing("reanimated.opt.container_easing", () -> c.containerEasing, v -> c.containerEasing = v));
+            }
+            case 4 -> {
+                rows.add(toggle("reanimated.opt.hover_enabled", () -> c.hoverEnabled, v -> c.hoverEnabled = v));
+                rows.add(slider("reanimated.opt.hover_scale", 0.0, 0.3, c.hoverScale, "", v -> c.hoverScale = (float) v));
+                rows.add(slider("reanimated.opt.hover_speed", 2, 30, c.hoverSpeed, "", v -> c.hoverSpeed = (float) v));
+                rows.add(toggle("reanimated.opt.press_enabled", () -> c.pressEnabled, v -> c.pressEnabled = v));
+                rows.add(slider("reanimated.opt.press_scale", 0.0, 0.3, c.pressScale, "", v -> c.pressScale = (float) v));
+                rows.add(slider("reanimated.opt.press_duration", 0.05, 0.6, c.pressDuration, " s", v -> c.pressDuration = (float) v));
+                rows.add(toggle("reanimated.opt.slot_enabled", () -> c.slotHighlightEnabled, v -> c.slotHighlightEnabled = v));
+                rows.add(slider("reanimated.opt.slot_speed", 4, 40, c.slotHighlightSpeed, "", v -> c.slotHighlightSpeed = (float) v));
+            }
+            case 5 -> {
+                rows.add(toggle("reanimated.opt.logo_enabled", () -> c.logoEnabled, v -> c.logoEnabled = v));
+                rows.add(cycler("reanimated.opt.logo_style", () -> c.logoStyle, v -> c.logoStyle = v, LogoStyle.values(), s -> s.display));
+                rows.add(slider("reanimated.opt.logo_duration", 0.1, 2.0, c.logoDuration, " s", v -> c.logoDuration = (float) v));
+                rows.add(easing("reanimated.opt.logo_easing", () -> c.logoEasing, v -> c.logoEasing = v));
+                rows.add(intSlider("reanimated.opt.logo_letter_duration", 50, 1200, c.profileLogo.durationMs, " ms", v -> c.profileLogo.durationMs = v));
+                rows.add(intSlider("reanimated.opt.logo_letter_delay", 0, 300, c.profileLogo.cascadeDelayMs, " ms", v -> c.profileLogo.cascadeDelayMs = v));
+                rows.add(slider("reanimated.opt.logo_letter_offset", -60, 60, c.profileLogo.offsetY, " px", v -> c.profileLogo.offsetY = (float) v));
+                rows.add(cycler("reanimated.opt.logo_letter_order", () -> c.profileLogo.cascadeOrder,
+                        v -> c.profileLogo.cascadeOrder = v, CascadeOrder.values(), o -> o.display));
+                rows.add(easing("reanimated.opt.logo_letter_easing", () -> c.profileLogo.easing, v -> c.profileLogo.easing = v));
+            }
+            case 6 -> {
+                rows.add(toggle("reanimated.opt.tabs_enabled", () -> c.tabsEnabled, v -> c.tabsEnabled = v));
+                rows.add(intSlider("reanimated.opt.tabs_duration", 50, 1200, c.profileTabs.durationMs, " ms", v -> c.profileTabs.durationMs = v));
+                rows.add(intSlider("reanimated.opt.tabs_delay", 0, 300, c.profileTabs.cascadeDelayMs, " ms", v -> c.profileTabs.cascadeDelayMs = v));
+                rows.add(slider("reanimated.opt.tabs_offset", -120, 120, c.profileTabs.offsetY, " px", v -> c.profileTabs.offsetY = (float) v));
+                rows.add(easing("reanimated.opt.tabs_easing", () -> c.profileTabs.easing, v -> c.profileTabs.easing = v));
+            }
+            case 7 -> {
+                rows.add(toggle("reanimated.opt.transition_enabled", () -> c.transitionEnabled, v -> c.transitionEnabled = v));
+                rows.add(cycler("reanimated.opt.transition_style", () -> c.transitionStyle, v -> c.transitionStyle = v,
+                        TransitionStyle.values(), t -> t.display));
+                rows.add(intSlider("reanimated.opt.transition_speed", 1, 20, c.transitionSpeedTicks, " t", v -> c.transitionSpeedTicks = v));
+                rows.add(slider("reanimated.opt.transition_distance", 0, 120, c.transitionDistance, " px", v -> c.transitionDistance = (float) v));
+                rows.add(easing("reanimated.opt.transition_easing", () -> c.transitionEasing, v -> c.transitionEasing = v));
+            }
+            case 8 -> {
+                rows.add(toggle("reanimated.opt.tooltip_enabled", () -> c.tooltipEnabled, v -> c.tooltipEnabled = v));
+                rows.add(intSlider("reanimated.opt.tooltip_duration", 30, 500, c.tooltipDurationMs, " ms", v -> c.tooltipDurationMs = v));
+                rows.add(slider("reanimated.opt.tooltip_scale", 0.5, 1.0, c.tooltipScale, "", v -> c.tooltipScale = (float) v));
+                rows.add(slider("reanimated.opt.tooltip_offset", -20, 20, c.tooltipOffsetY, " px", v -> c.tooltipOffsetY = (float) v));
+                rows.add(easing("reanimated.opt.tooltip_easing", () -> c.tooltipEasing, v -> c.tooltipEasing = v));
+                rows.add(toggle("reanimated.opt.toast_enabled", () -> c.toastEnabled, v -> c.toastEnabled = v));
+                rows.add(intSlider("reanimated.opt.toast_duration", 100, 600, c.toastDurationMs, " ms", v -> c.toastDurationMs = v));
+                rows.add(easing("reanimated.opt.toast_easing", () -> c.toastEasing, v -> c.toastEasing = v));
+                rows.add(toggle("reanimated.opt.recipebook_enabled", () -> c.recipeBookEnabled, v -> c.recipeBookEnabled = v));
+                rows.add(intSlider("reanimated.opt.recipebook_duration", 30, 500, c.recipeBookDurationMs, " ms", v -> c.recipeBookDurationMs = v));
+                rows.add(slider("reanimated.opt.recipebook_scale", 0.5, 1.0, c.recipeBookScale, "", v -> c.recipeBookScale = (float) v));
+                rows.add(slider("reanimated.opt.recipebook_offset", 0, 40, c.recipeBookOffsetX, " px", v -> c.recipeBookOffsetX = (float) v));
+                rows.add(easing("reanimated.opt.recipebook_easing", () -> c.recipeBookEasing, v -> c.recipeBookEasing = v));
+            }
+            default -> {
+                rows.add(cycler("reanimated.opt.preset", () -> c.uiPreset, v -> c.uiPreset = v, UiPreset.MAIN, p -> p.display));
+                rows.add(intSlider("reanimated.opt.speed_ticks", 1, 40, c.animationSpeedTicks, " t", v -> c.animationSpeedTicks = v));
+                rows.add(scope("reanimated.opt.animate_scope", () -> c.animateModdedScreens, v -> c.animateModdedScreens = v));
+                rows.add(toggle("reanimated.opt.close_enabled", () -> c.closeAnimationEnabled, v -> c.closeAnimationEnabled = v));
+                rows.add(toggle("reanimated.opt.bg_fade", () -> c.bgFadeEnabled, v -> c.bgFadeEnabled = v));
+                rows.add(toggle("reanimated.opt.lists_enabled", () -> c.listsEnabled, v -> c.listsEnabled = v));
+                rows.add(Button.builder(Component.translatable("reanimated.opt.export"),
+                                b -> this.exportSettings())
+                        .bounds(0, 0, 158, 20).build());
+                rows.add(Button.builder(Component.translatable("reanimated.opt.import"),
+                                b -> this.importSettings())
+                        .bounds(0, 0, 158, 20).build());
+                rows.add(Button.builder(Component.translatable("reanimated.opt.profile_editor"),
+                                b -> this.minecraft.setScreen(new AnimProfileEditorScreen(this)))
+                        .bounds(0, 0, 158, 20).build());
+                rows.add(Button.builder(Component.translatable("reanimated.opt.studio"),
+                                b -> this.minecraft.setScreen(new AnimationStudioScreen(this)))
+                        .bounds(0, 0, 158, 20).build());
+                rows.add(Button.builder(Component.translatable("reanimated.opt.screens"),
+                                b -> this.minecraft.setScreen(new ScreenRulesScreen(this)))
+                        .bounds(0, 0, 158, 20).build());
+                java.util.List<CustomPreset> extensionPresets = ReAnimatedApi.presets();
+                if (!extensionPresets.isEmpty()) {
+                    rows.add(extensionPreset(c, extensionPresets));
+                }
+                for (SettingsEntry entry : ReAnimatedApi.settingsEntries()) {
+                    rows.add(Button.builder(Component.literal(entry.label()),
+                                    b -> {
+                                        ReAnimatedApi.openEntry(entry, this);
+                                        rebuildWidgets();
+                                    })
+                            .bounds(0, 0, 158, 20).build());
+                }
+            }
+        }
+
+        int rowsTop = TABS_TOP + tabRows * TAB_ROW_H + 6;
+        int doneY = this.height - 26;
+        int avail = Math.max(20, doneY - 4 - rowsTop);
+
+        int[] grid = GRIDS[GRIDS.length - 1];
+        for (int[] g : GRIDS) {
+            int lines = (rows.size() + g[0] - 1) / g[0];
+            if (lines * (g[1] + g[2]) - g[2] <= avail) {
+                grid = g;
+                break;
+            }
+        }
+        int cols = grid[0], rowH = grid[1], vgap = grid[2];
+
+        int lines = (rows.size() + cols - 1) / cols;
+        int colW = Math.min(COL_MAX_W, (this.width - 2 * SIDE - (cols - 1) * COL_GAP) / cols);
+        int totalW = colW * cols + COL_GAP * (cols - 1);
+        int startX = (this.width - totalW) / 2;
+        int blockH = lines * (rowH + vgap) - vgap;
+        int startY = rowsTop + Math.max(0, (avail - blockH) / 2);
+        for (int i = 0; i < rows.size(); i++) {
+            int col = i % cols;
+            int r = i / cols;
+            AbstractWidget w = rows.get(i);
+            w.setWidth(colW);
+            w.setHeight(rowH);
+            w.setX(startX + col * (colW + COL_GAP));
+            w.setY(startY + r * (rowH + vgap));
+            addRenderableWidget(w);
+        }
+
+        addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose())
+                .bounds(this.width / 2 - 100, doneY, 200, 20).build());
+    }
+
+    private static Component tabLabel(int i) {
+        return Component.translatable(TABS[i]);
+    }
+
+    private Button extensionPreset(ReAnimatedConfig c, java.util.List<CustomPreset> presets) {
+        return Button.builder(extensionLabel(c, presets), b -> {
+            int next = (extensionIndex(c, presets) + 1) % (presets.size() + 1);
+            if (next == 0) {
+                if (c.uiPreset == UiPreset.CUSTOM) c.uiPreset = UiPreset.DEFAULT;
+                c.customPresetId = "";
+            } else {
+                c.uiPreset = UiPreset.CUSTOM;
+                c.customPresetId = presets.get(next - 1).id();
+            }
+            c.save();
+            b.setMessage(extensionLabel(c, presets));
+        }).bounds(0, 0, 158, 20).build();
+    }
+
+    private static int extensionIndex(ReAnimatedConfig c, java.util.List<CustomPreset> presets) {
+        if (c.uiPreset != UiPreset.CUSTOM) return 0;
+        for (int i = 0; i < presets.size(); i++) {
+            if (presets.get(i).id().equals(c.customPresetId)) return i + 1;
+        }
+        return 0;
+    }
+
+    private static Component extensionLabel(ReAnimatedConfig c, java.util.List<CustomPreset> presets) {
+        int i = extensionIndex(c, presets);
+        Component value = i == 0
+            ? Component.translatable("reanimated.opt.custom_preset.off")
+            : Component.literal(presets.get(i - 1).displayName());
+        return Component.translatable("reanimated.opt.custom_preset").append(Component.literal(": ")).append(value);
+    }
+
+    private Button toggle(String key, BooleanSupplier get, Consumer<Boolean> set) {
+        return Button.builder(boolLabel(key, get.getAsBoolean()), b -> {
+            boolean nv = !get.getAsBoolean();
+            set.accept(nv);
+            ReAnimatedConfig.get().save();
+            b.setMessage(boolLabel(key, nv));
+        }).bounds(0, 0, 158, 20).build();
+    }
+
+    private Button scope(String key, BooleanSupplier get, Consumer<Boolean> set) {
+        return Button.builder(scopeLabel(key, get.getAsBoolean()), b -> {
+            boolean nv = !get.getAsBoolean();
+            set.accept(nv);
+            ReAnimatedConfig.get().save();
+            b.setMessage(scopeLabel(key, nv));
+        }).bounds(0, 0, 158, 20).build();
+    }
+
+    private <T extends Enum<T>> Button cycler(String key, Supplier<T> get, Consumer<T> set,
+                                              T[] values, java.util.function.Function<T, String> display) {
+        return Button.builder(enumLabel(key, display.apply(get.get())), b -> {
+            int i = 0;
+            for (int k = 0; k < values.length; k++) {
+                if (values[k] == get.get()) i = k;
+            }
+            T nx = values[(i + 1) % values.length];
+            set.accept(nx);
+            ReAnimatedConfig.get().save();
+            b.setMessage(enumLabel(key, display.apply(nx)));
+        }).bounds(0, 0, 158, 20).build();
+    }
+
+    private Button easing(String key, Supplier<EasingType> get, Consumer<EasingType> set) {
+        return cycler(key, get, set, EasingType.values(), e -> e.display);
+    }
+
+    private AbstractWidget slider(String key, double min, double max, double current, String unit, DoubleConsumer setter) {
+        return new ConfigSlider(key, min, max, current, unit, setter);
+    }
+
+    private AbstractWidget intSlider(String key, int min, int max, int current, String unit, IntConsumer setter) {
+        return new IntSlider(key, min, max, current, unit, setter);
+    }
+
+    private static Component boolLabel(String key, boolean on) {
+        return Component.translatable(key).append(Component.literal(": " + (on ? "ON" : "OFF")));
+    }
+
+    private static Component scopeLabel(String key, boolean all) {
+        return Component.translatable(key).append(Component.literal(": "))
+                .append(Component.translatable(all ? "reanimated.opt.animate_scope.all" : "reanimated.opt.animate_scope.vanilla"));
+    }
+
+    private static Component enumLabel(String key, String display) {
+        return Component.translatable(key).append(Component.literal(": " + display));
+    }
+
+    private void exportSettings() {
+        this.minecraft.keyboardHandler.setClipboard(ReAnimatedConfig.get().toShareString());
+        this.showNotice("reanimated.opt.export.done", false);
+    }
+
+    private void importSettings() {
+        String text = this.minecraft.keyboardHandler.getClipboard();
+        if (ReAnimatedConfig.applyShareString(text)) {
+            Component saved = Component.translatable("reanimated.opt.import.done")
+                .withStyle(net.minecraft.ChatFormatting.GREEN);
+            this.rebuildWidgets();
+            this.notice = saved;
+            this.noticeTime = System.currentTimeMillis();
+        } else {
+            this.showNotice("reanimated.opt.import.failed", true);
+        }
+    }
+
+    private void showNotice(String key, boolean error) {
+        this.notice = Component.translatable(key).withStyle(
+            error ? net.minecraft.ChatFormatting.RED : net.minecraft.ChatFormatting.GREEN);
+        this.noticeTime = System.currentTimeMillis();
+    }
+
+    @Override
+    public void render(GuiGraphics g, int mouseX, int mouseY, float partial) {
+        super.render(g, mouseX, mouseY, partial);
+        g.drawCenteredString(this.font, this.title, this.width / 2, 26, 0xFFFFFFFF);
+        if (this.notice != null) {
+            if (System.currentTimeMillis() - this.noticeTime > NOTICE_MS) {
+                this.notice = null;
+            } else {
+                int noticeY = this.height - 40;
+                int noticeW = this.font.width(this.notice);
+                g.fill(this.width / 2 - noticeW / 2 - 3, noticeY - 2,
+                        this.width / 2 + noticeW / 2 + 3, noticeY + 10, 0xC0000000);
+                g.drawCenteredString(this.font, this.notice, this.width / 2, noticeY, 0xFFFFFFFF);
+            }
+        }
+    }
+
+    @Override
+    public void onClose() {
+        this.minecraft.setScreen(parent);
+    }
+
+    private static class ConfigSlider extends AbstractSliderButton {
+        private final String key;
+        private final double min;
+        private final double max;
+        private final String unit;
+        private final DoubleConsumer setter;
+
+        ConfigSlider(String key, double min, double max, double current, String unit, DoubleConsumer setter) {
+            super(0, 0, 158, 20, Component.empty(), (current - min) / (max - min));
+            this.key = key;
+            this.min = min;
+            this.max = max;
+            this.unit = unit;
+            this.setter = setter;
+            updateMessage();
+        }
+
+        @Override
+        protected void updateMessage() {
+            double val = min + this.value * (max - min);
+            setMessage(Component.translatable(key).append(Component.literal(": " + String.format("%.2f", val) + unit)));
+        }
+
+        @Override
+        protected void applyValue() {
+            double val = min + this.value * (max - min);
+            setter.accept(val);
+            ReAnimatedConfig.get().save();
+        }
+    }
+
+    private static class IntSlider extends AbstractSliderButton {
+        private final String key;
+        private final int min;
+        private final int max;
+        private final String unit;
+        private final IntConsumer setter;
+
+        IntSlider(String key, int min, int max, int current, String unit, IntConsumer setter) {
+            super(0, 0, 158, 20, Component.empty(), (double) (current - min) / (max - min));
+            this.key = key;
+            this.min = min;
+            this.max = max;
+            this.unit = unit;
+            this.setter = setter;
+            updateMessage();
+        }
+
+        private int intValue() {
+            return (int) Math.round(min + this.value * (max - min));
+        }
+
+        @Override
+        protected void updateMessage() {
+            setMessage(Component.translatable(key).append(Component.literal(": " + intValue() + unit)));
+        }
+
+        @Override
+        protected void applyValue() {
+            setter.accept(intValue());
+            ReAnimatedConfig.get().save();
+        }
+    }
+}
