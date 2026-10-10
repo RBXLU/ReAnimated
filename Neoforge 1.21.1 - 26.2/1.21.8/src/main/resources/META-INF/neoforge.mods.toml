@@ -9,8 +9,7 @@ version = "${version}"
 displayName = "ReAnimated"
 authors = "pycodder"
 logoFile = "icon.png"
-description = '''
-Плавные анимации для всего интерфейса Minecraft: заставка, кнопки, меню, контейнеры и инвентарь.'''
+description = '''${description}'''
 
 [[mixins]]
 config = "reanimated.mixins.json"

@@ -36,6 +36,8 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
     private long noticeTime = 0L;
     private static final long NOTICE_MS = 4000L;
 
+    private boolean reanimated$rebuild = false;
+
     public ReAnimatedConfigScreen(Screen parent) {
         super(parent, MinecraftClient.getInstance().options, Text.translatable("reanimated.config.title"));
     }
@@ -69,6 +71,32 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
     protected void addOptions() {
         ReAnimatedConfig c = ReAnimatedConfig.get();
 
+        section("reanimated.section.main");
+        this.body.addAll(
+            preset("reanimated.opt.preset", c.uiPreset, v -> c.uiPreset = v),
+            ticks("reanimated.opt.speed_ticks", 1, 40, c.animationSpeedTicks, v -> c.animationSpeedTicks = v),
+            scope("reanimated.opt.animate_scope", c.animateModdedScreens, v -> c.animateModdedScreens = v),
+            toggle("reanimated.opt.close_enabled", c.closeAnimationEnabled, v -> c.closeAnimationEnabled = v),
+            toggle("reanimated.opt.bg_fade", c.bgFadeEnabled, v -> c.bgFadeEnabled = v)
+        );
+
+        section("reanimated.section.enable");
+        this.body.addAll(
+            toggle("reanimated.opt.screen_enabled", c.screenOpenEnabled, v -> c.screenOpenEnabled = v),
+            toggle("reanimated.opt.pause_enabled", c.pauseEnabled, v -> c.pauseEnabled = v),
+            toggle("reanimated.opt.container_enabled", c.containerEnabled, v -> c.containerEnabled = v),
+            toggle("reanimated.opt.transition_enabled", c.transitionEnabled, v -> c.transitionEnabled = v),
+            toggle("reanimated.opt.lists_enabled", c.listsEnabled, v -> c.listsEnabled = v),
+            toggle("reanimated.opt.recipebook_enabled", c.recipeBookEnabled, v -> c.recipeBookEnabled = v),
+            toggle("reanimated.opt.tooltip_enabled", c.tooltipEnabled, v -> c.tooltipEnabled = v),
+            toggle("reanimated.opt.toast_enabled", c.toastEnabled, v -> c.toastEnabled = v),
+            toggle("reanimated.opt.hover_enabled", c.hoverEnabled, v -> c.hoverEnabled = v),
+            toggle("reanimated.opt.press_enabled", c.pressEnabled, v -> c.pressEnabled = v),
+            toggle("reanimated.opt.slot_enabled", c.slotHighlightEnabled, v -> c.slotHighlightEnabled = v),
+            toggle("reanimated.opt.logo_enabled", c.logoEnabled, v -> c.logoEnabled = v),
+            toggle("reanimated.opt.tabs_enabled", c.tabsEnabled, v -> c.tabsEnabled = v)
+        );
+
         section("reanimated.section.tools");
         this.body.addWidgetEntry(
             ButtonWidget.builder(STUDIO, b -> this.client.setScreen(new AnimationStudioScreen(this)))
@@ -88,35 +116,34 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
 
         reanimated$extensions();
 
-        section("reanimated.section.general");
-        this.body.addAll(
-            preset("reanimated.opt.preset", c.uiPreset, v -> c.uiPreset = v),
-            ticks("reanimated.opt.speed_ticks", 1, 40, c.animationSpeedTicks, v -> c.animationSpeedTicks = v),
-            scope("reanimated.opt.animate_scope", c.animateModdedScreens, v -> c.animateModdedScreens = v),
-            toggle("reanimated.opt.close_enabled", c.closeAnimationEnabled, v -> c.closeAnimationEnabled = v),
-            toggle("reanimated.opt.bg_fade", c.bgFadeEnabled, v -> c.bgFadeEnabled = v),
-            toggle("reanimated.opt.lists_enabled", c.listsEnabled, v -> c.listsEnabled = v)
-        );
+        section("reanimated.section.details");
+        this.body.addAll(expand("reanimated.opt.advanced", c.advancedSettings, v -> c.advancedSettings = v));
+        if (!c.advancedSettings) {
+            return;
+        }
 
         section("reanimated.section.menu");
         this.body.addAll(
-            toggle("reanimated.opt.screen_enabled", c.screenOpenEnabled, v -> c.screenOpenEnabled = v),
             slider("reanimated.opt.screen_distance", 0, 80, c.screenOpenDistance, " px", v -> c.screenOpenDistance = v.floatValue()),
             easing("reanimated.opt.screen_easing", c.screenOpenEasing, v -> c.screenOpenEasing = v)
         );
 
         section("reanimated.section.pause");
         this.body.addAll(
-            toggle("reanimated.opt.pause_enabled", c.pauseEnabled, v -> c.pauseEnabled = v),
             pausePreset("reanimated.opt.pause_preset", c.pausePreset, v -> c.pausePreset = v),
             ticks("reanimated.opt.pause_speed_ticks", 1, 40, c.pauseSpeedTicks, v -> c.pauseSpeedTicks = v),
             slider("reanimated.opt.pause_distance", 0, 80, c.pauseDistance, " px", v -> c.pauseDistance = v.floatValue()),
             easing("reanimated.opt.pause_easing", c.pauseEasing, v -> c.pauseEasing = v)
         );
 
+        section("reanimated.section.containers");
+        this.body.addAll(
+            slider("reanimated.opt.container_distance", 0, 120, c.containerDistance, " px", v -> c.containerDistance = v.floatValue()),
+            easing("reanimated.opt.container_easing", c.containerEasing, v -> c.containerEasing = v)
+        );
+
         section("reanimated.section.transitions");
         this.body.addAll(
-            toggle("reanimated.opt.transition_enabled", c.transitionEnabled, v -> c.transitionEnabled = v),
             transitionStyle("reanimated.opt.transition_style", c.transitionStyle, v -> c.transitionStyle = v),
             ticks("reanimated.opt.transition_speed", 1, 20, c.transitionSpeedTicks, v -> c.transitionSpeedTicks = v),
             slider("reanimated.opt.transition_distance", 0, 120, c.transitionDistance, " px", v -> c.transitionDistance = v.floatValue()),
@@ -125,43 +152,29 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
 
         section("reanimated.section.popups");
         this.body.addAll(
-            toggle("reanimated.opt.recipebook_enabled", c.recipeBookEnabled, v -> c.recipeBookEnabled = v),
             intSlider("reanimated.opt.recipebook_duration", 30, 500, c.recipeBookDurationMs, " ms", v -> c.recipeBookDurationMs = v),
             slider("reanimated.opt.recipebook_scale", 0.5, 1.0, c.recipeBookScale, "", v -> c.recipeBookScale = v.floatValue()),
             slider("reanimated.opt.recipebook_offset", 0, 40, c.recipeBookOffsetX, " px", v -> c.recipeBookOffsetX = v.floatValue()),
             easing("reanimated.opt.recipebook_easing", c.recipeBookEasing, v -> c.recipeBookEasing = v),
-            toggle("reanimated.opt.tooltip_enabled", c.tooltipEnabled, v -> c.tooltipEnabled = v),
             intSlider("reanimated.opt.tooltip_duration", 30, 500, c.tooltipDurationMs, " ms", v -> c.tooltipDurationMs = v),
             slider("reanimated.opt.tooltip_scale", 0.5, 1.0, c.tooltipScale, "", v -> c.tooltipScale = v.floatValue()),
             slider("reanimated.opt.tooltip_offset", -20, 20, c.tooltipOffsetY, " px", v -> c.tooltipOffsetY = v.floatValue()),
             easing("reanimated.opt.tooltip_easing", c.tooltipEasing, v -> c.tooltipEasing = v),
-            toggle("reanimated.opt.toast_enabled", c.toastEnabled, v -> c.toastEnabled = v),
             intSlider("reanimated.opt.toast_duration", 100, 600, c.toastDurationMs, " ms", v -> c.toastDurationMs = v),
             easing("reanimated.opt.toast_easing", c.toastEasing, v -> c.toastEasing = v)
         );
 
-        section("reanimated.section.containers");
-        this.body.addAll(
-            toggle("reanimated.opt.container_enabled", c.containerEnabled, v -> c.containerEnabled = v),
-            slider("reanimated.opt.container_distance", 0, 120, c.containerDistance, " px", v -> c.containerDistance = v.floatValue()),
-            easing("reanimated.opt.container_easing", c.containerEasing, v -> c.containerEasing = v)
-        );
-
         section("reanimated.section.cursor");
         this.body.addAll(
-            toggle("reanimated.opt.hover_enabled", c.hoverEnabled, v -> c.hoverEnabled = v),
             slider("reanimated.opt.hover_scale", 0.0, 0.3, c.hoverScale, "", v -> c.hoverScale = v.floatValue()),
             slider("reanimated.opt.hover_speed", 2, 30, c.hoverSpeed, "", v -> c.hoverSpeed = v.floatValue()),
-            toggle("reanimated.opt.press_enabled", c.pressEnabled, v -> c.pressEnabled = v),
             slider("reanimated.opt.press_scale", 0.0, 0.3, c.pressScale, "", v -> c.pressScale = v.floatValue()),
             slider("reanimated.opt.press_duration", 0.05, 0.6, c.pressDuration, " s", v -> c.pressDuration = v.floatValue()),
-            toggle("reanimated.opt.slot_enabled", c.slotHighlightEnabled, v -> c.slotHighlightEnabled = v),
             slider("reanimated.opt.slot_speed", 4, 40, c.slotHighlightSpeed, "", v -> c.slotHighlightSpeed = v.floatValue())
         );
 
         section("reanimated.section.logo");
         this.body.addAll(
-            toggle("reanimated.opt.logo_enabled", c.logoEnabled, v -> c.logoEnabled = v),
             logoStyle("reanimated.opt.logo_style", c.logoStyle, v -> c.logoStyle = v),
             slider("reanimated.opt.logo_duration", 0.1, 2.0, c.logoDuration, " s", v -> c.logoDuration = v.floatValue()),
             easing("reanimated.opt.logo_easing", c.logoEasing, v -> c.logoEasing = v),
@@ -174,12 +187,19 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
 
         section("reanimated.section.tabs");
         this.body.addAll(
-            toggle("reanimated.opt.tabs_enabled", c.tabsEnabled, v -> c.tabsEnabled = v),
             intSlider("reanimated.opt.tabs_duration", 50, 1200, c.profileTabs.durationMs, " ms", v -> c.profileTabs.durationMs = v),
             intSlider("reanimated.opt.tabs_delay", 0, 300, c.profileTabs.cascadeDelayMs, " ms", v -> c.profileTabs.cascadeDelayMs = v),
             slider("reanimated.opt.tabs_offset", -120, 120, c.profileTabs.offsetY, " px", v -> c.profileTabs.offsetY = v.floatValue()),
             easing("reanimated.opt.tabs_easing", c.profileTabs.easing, v -> c.profileTabs.easing = v)
         );
+    }
+
+    private SimpleOption<Boolean> expand(String key, boolean current, Consumer<Boolean> setter) {
+        return SimpleOption.ofBoolean(key, current, v -> {
+            setter.accept(v);
+            ReAnimatedConfig.get().save();
+            this.reanimated$rebuild = true;
+        });
     }
 
     private void reanimated$extensions() {
@@ -403,6 +423,10 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        if (this.reanimated$rebuild) {
+            this.reanimated$rebuild = false;
+            this.clearAndInit();
+        }
         super.render(context, mouseX, mouseY, delta);
         boolean overCredit = reanimated$overCredit(mouseX, mouseY);
         context.drawTextWithShadow(this.textRenderer, CREDIT, 4, this.height - 12, overCredit ? 0xFF88CCFF : 0xFF5599DD);

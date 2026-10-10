@@ -7,6 +7,7 @@ import com.pycodder.reanimated.anim.OwnTransform;
 import com.pycodder.reanimated.anim.AnimProfile;
 import com.pycodder.reanimated.anim.CascadeTarget;
 import com.pycodder.reanimated.anim.UiTransform;
+import com.pycodder.reanimated.compat.BlurPlusCompat;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Element;
@@ -81,9 +82,15 @@ public abstract class ScreenMixin {
         return reanimated$pauseFlag == 1;
     }
 
-    @Inject(method = "renderWithTooltip", at = @At("HEAD"))
+    @Inject(method = "renderWithTooltip", at = @At("HEAD"), cancellable = true)
     private void reanimated$wrapHead(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        if (Anim.closeReadyScreen == this) {
+            reanimated$closeNow(null);
+            ci.cancel();
+            return;
+        }
         OwnTransform.reset();
+        Anim.frameGraphics = context;
         Anim.beginFrame();
         Anim.currentOpenTime = reanimated$openTime;
         Anim.currentIsPause = reanimated$isPause();
@@ -115,7 +122,15 @@ public abstract class ScreenMixin {
     private void reanimated$maybeFinishClose() {
         if (!Anim.isClosing()) return;
         if (!Anim.closeFinished(reanimated$isContainer())) return;
-        Object next = Anim.pendingScreen;
+        if (Anim.pendingScreen == null) {
+            Anim.closeReadyScreen = this;
+            return;
+        }
+        reanimated$closeNow(Anim.pendingScreen);
+    }
+
+    @Unique
+    private void reanimated$closeNow(Object next) {
         Anim.finishClose();
         Anim.bypassClose = true;
         MinecraftClient.getInstance().setScreen(next instanceof Screen s ? s : null);
@@ -147,6 +162,7 @@ public abstract class ScreenMixin {
 
     @Inject(method = "renderInGameBackground", at = @At("HEAD"), cancellable = true)
     private void reanimated$dimFade(DrawContext context, CallbackInfo ci) {
+        if (BlurPlusCompat.present()) return;
         if (!Anim.shouldAnimate(this)) return;
         float k = Anim.backgroundFade(reanimated$isContainer());
         if (k >= 1f) return;

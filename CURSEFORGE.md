@@ -75,7 +75,7 @@ Want something of your own? The **Animation Studio** and the **Profile Editor** 
 
 Open **Options → Video Settings → `ReAnimated settings`**, or through **Mod Menu**.
 
-- **Sections:** *General · Menu screens · Pause menu · Screen transitions · Containers · Cursor · Tooltips & toasts · Logo · Tabs*
+- **What most people change comes first** — the *General* tab opens with the preset, the speed, the close animation and background dimming; everything finer lives in its own tabs: *Menu · Pause · Containers · Cursor · Logo · Tabs · Transitions · Popups*
 - **Per-screen settings** — give one screen its own preset or speed, or switch its animation off entirely
 - **The pause menu has its own settings** — it is opened the most, so it gets its own speed and preset
 - **Export / Import** — your whole configuration as one line in the clipboard, ready to share
@@ -121,11 +121,16 @@ There's a **separate download for each Minecraft version** — GUI rendering cha
 
 | | |
 |---|---|
-| **Minecraft** | 1.21.1 – 1.21.11, 26.1.2, 26.2 |
-| **Loaders** | Fabric · Quilt · NeoForge |
-| **File name** | `reanimated-<Minecraft version>+<mod version>.jar`, e.g. `reanimated-1.21.11+1.7.jar` |
+| **Minecraft (Fabric / Quilt)** | 1.21.1 – 1.21.11, 26.1.2, 26.2, 26.3 |
+| **Minecraft (NeoForge)** | 1.21.1, 1.21.3 – 1.21.5, 1.21.8, 1.21.10, 1.21.11 |
+| **File name** | `reanimated-<Minecraft version>+<mod version>.jar`, e.g. `reanimated-1.21.11+1.7.1.jar` |
 
-NeoForge builds carry the same features; their version numbers run one release behind, because 1.5.0 never shipped for NeoForge — Fabric **1.7** matches NeoForge **1.6**.
+NeoForge builds carry the same features and, since **1.7.1**, the same version number as Fabric. The only Fabric-only piece is the mod's page inside Sodium's settings screen.
+
+**Plays well with other mods:**
+- **[Sodium](https://modrinth.com/mod/sodium)**, **Iris**, **VulkanMod** — ReAnimated only touches interface drawing, and gets its own place in their settings screen.
+- **[Blur+](https://modrinth.com/mod/blur-plus)** — the blurred background fades out together with the closing panel instead of after it.
+- **[Smooth Scrolling](https://modrinth.com/mod/smooth-scroll)** — the slot highlight scrolls along with the items in the creative inventory.
 
 
 <img src="https://raw.githubusercontent.com/RBXLU/devReAnimated/main/docs/images/divider.png" alt="" width="100%">
@@ -187,7 +192,7 @@ The **letter-by-letter logo cascade** (idea + letter textures) and the idea of t
 
 Настройки → Настройки графики → «Настройки ReAnimated», или через **Mod Menu**.
 
-- **Секции:** *Общее · Экраны меню · Меню паузы · Переходы · Контейнеры · Курсор · Подсказки и уведомления · Логотип · Вкладки*
+- **Главное — сверху** — вкладка *Общее* начинается с пресета, скорости, анимации закрытия и затемнения фона; всё подробное разложено по своим вкладкам: *Меню · Пауза · Контейнеры · Курсор · Логотип · Вкладки · Переходы · Всплывающие окна*
 - **Настройки отдельных экранов** — свой пресет, своя скорость или выключенная анимация для конкретного меню
 - **У меню паузы свои настройки** — его открывают чаще всего, поэтому у него отдельные скорость и пресет
 - **Копировать / Вставить** — вся конфигурация одной строкой через буфер обмена
@@ -205,11 +210,16 @@ The **letter-by-letter logo cascade** (idea + letter textures) and the idea of t
 
 | | |
 |---|---|
-| **Minecraft** | 1.21.1 – 1.21.11, 26.1.2, 26.2 |
-| **Загрузчики** | Fabric · Quilt · NeoForge |
-| **Имя файла** | `reanimated-<версия Minecraft>+<версия мода>.jar`, например `reanimated-1.21.11+1.7.jar` |
+| **Minecraft (Fabric / Quilt)** | 1.21.1 – 1.21.11, 26.1.2, 26.2, 26.3 |
+| **Minecraft (NeoForge)** | 1.21.1, 1.21.3 – 1.21.5, 1.21.8, 1.21.10, 1.21.11 |
+| **Имя файла** | `reanimated-<версия Minecraft>+<версия мода>.jar`, например `reanimated-1.21.11+1.7.1.jar` |
 
-Сборки NeoForge отстают на один номер: версия 1.5.0 для них не выходила, поэтому Fabric **1.7** соответствует NeoForge **1.6**.
+У сборок NeoForge те же возможности, а с **1.7.1** — и тот же номер версии, что у Fabric. Только на Fabric остаётся страница мода внутри экрана настроек Sodium.
+
+**Дружит с другими модами:**
+- **[Sodium](https://modrinth.com/mod/sodium)**, **Iris**, **VulkanMod** — ReAnimated трогает только отрисовку интерфейса и встраивается в их экран настроек.
+- **[Blur+](https://modrinth.com/mod/blur-plus)** — размытый фон гаснет вместе с закрывающейся панелью, а не после неё.
+- **[Smooth Scrolling](https://modrinth.com/mod/smooth-scroll)** — подсветка слота прокручивается вместе с предметами в креативном инвентаре.
 
 ### Благодарности
 

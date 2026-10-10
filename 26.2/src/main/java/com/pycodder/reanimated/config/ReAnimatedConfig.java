@@ -91,6 +91,8 @@ public class ReAnimatedConfig {
     public int toastDurationMs = 380;
     public EasingType toastEasing = EasingType.OUT_BACK;
 
+    public boolean advancedSettings = false;
+
     public java.util.Map<String, ScreenOverride> screenOverrides = new java.util.LinkedHashMap<>();
 
     public boolean hoverEnabled = true;

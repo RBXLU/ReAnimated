@@ -3,6 +3,7 @@
   "package": "com.pycodder.reanimated.mixin",
   "client": [
     "ScreenMixin",
+    "ScreenBackgroundMixin",
     "ClickableWidgetMixin",
     "AbstractSelectionListMixin",
     "HandledScreenMixin",

@@ -5,6 +5,7 @@ import com.pycodder.reanimated.anim.ScreenNav;
 import com.pycodder.reanimated.anim.ScreenRules;
 import com.pycodder.reanimated.anim.CascadeTarget;
 import com.pycodder.reanimated.anim.UiTransform;
+import com.pycodder.reanimated.compat.BlurPlusCompat;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractContainerWidget;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -72,8 +73,14 @@ public abstract class ScreenMixin {
         Anim.cascadeCount = Math.max(1, count);
     }
 
-    @Inject(method = "extractRenderStateWithTooltipAndSubtitles", at = @At("HEAD"))
+    @Inject(method = "extractRenderStateWithTooltipAndSubtitles", at = @At("HEAD"), cancellable = true)
     private void reanimated$wrapHead(GuiGraphicsExtractor extractor, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        if (Anim.closeReadyScreen == this) {
+            reanimated$closeNow(null);
+            ci.cancel();
+            return;
+        }
+        Anim.frameGraphics = extractor;
         Anim.beginFrame();
         if (reanimated$openTime == 0L) {
             reanimated$openTime = System.currentTimeMillis();
@@ -115,7 +122,15 @@ public abstract class ScreenMixin {
     private void reanimated$maybeFinishClose() {
         if (!Anim.isClosing()) return;
         if (!Anim.closeFinished(reanimated$isContainer())) return;
-        Object next = Anim.pendingScreen;
+        if (Anim.pendingScreen == null) {
+            Anim.closeReadyScreen = this;
+            return;
+        }
+        reanimated$closeNow(Anim.pendingScreen);
+    }
+
+    @Unique
+    private void reanimated$closeNow(Object next) {
         Anim.finishClose();
         Anim.bypassClose = true;
         net.minecraft.client.Minecraft.getInstance().setScreen(next instanceof Screen s ? s : null);
@@ -147,6 +162,7 @@ public abstract class ScreenMixin {
 
     @Inject(method = "extractTransparentBackground", at = @At("HEAD"), cancellable = true)
     private void reanimated$dimFade(GuiGraphicsExtractor extractor, CallbackInfo ci) {
+        if (BlurPlusCompat.present()) return;
         if (!Anim.shouldAnimate(this)) return;
         float k = Anim.backgroundFade(reanimated$isContainer());
         if (k >= 1f) return;

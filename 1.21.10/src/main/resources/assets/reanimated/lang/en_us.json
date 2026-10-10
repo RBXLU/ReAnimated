@@ -1,6 +1,10 @@
 {
   "reanimated.config.title": "ReAnimated — Settings",
   "reanimated.config.open": "ReAnimated settings",
+  "reanimated.section.main": "— Main —",
+  "reanimated.section.enable": "— What to animate —",
+  "reanimated.section.details": "— Detailed settings —",
+  "reanimated.opt.advanced": "Show all settings",
   "reanimated.section.general": "— General —",
   "reanimated.section.menu": "— Menu screens —",
   "reanimated.section.containers": "— Containers —",

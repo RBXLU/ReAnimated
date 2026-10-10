@@ -68,18 +68,17 @@ Settings are saved to `config/reanimated.json` and apply instantly.
 
 ## 📦 Requirements
 
-- **Fabric** or **Quilt**, plus **[Fabric API](https://modrinth.com/mod/fabric-api)**
-- **Fabric Loader** 0.16+
-- Minecraft **1.21.1 – 1.21.11**, and the newer **26.1 / 26.2** builds
+- **Fabric** or **Quilt**, plus **[Fabric API](https://modrinth.com/mod/fabric-api)** — Minecraft **1.21.1 – 1.21.11**, **26.1.2**, **26.2**, **26.3**
+- or **NeoForge** — Minecraft **1.21.1**, **1.21.3 – 1.21.5**, **1.21.8**, **1.21.10**, **1.21.11**
 
-Client-side only — not required on servers, and players without it won't notice anything different. Compatible with **Sodium** and other rendering mods (ReAnimated only touches GUI classes).
+Client-side only — not required on servers, and players without it won't notice anything different. Compatible with **Sodium**, **Iris** and other rendering mods (ReAnimated only touches GUI classes), **[Blur+](https://modrinth.com/mod/blur-plus)** (the blurred background fades out together with the closing panel) and **[Smooth Scrolling](https://modrinth.com/mod/smooth-scroll)** (the slot highlight scrolls along with the items).
 
 ### Supported versions
 There's a separate download for each Minecraft version. The GUI rendering changed a fair amount across 1.21.x and again in 26.x, so every version has its own build made against it — grab the one that matches your game exactly.
 
-**NeoForge:** same features, one release number behind — 1.5.0 never shipped for NeoForge, so Fabric **1.7** is NeoForge **1.6**.
+**NeoForge:** same features and, since **1.7.1**, the same version number as Fabric. The only Fabric-only piece is the mod's page inside Sodium's settings screen.
 
-> Each file is pinned to one Minecraft version — pick the one that matches your game. The mod version looks like `<Minecraft version>+<mod version>`, e.g. `1.21.1+1.7`.
+> Each file is pinned to one Minecraft version — pick the one that matches your game. The mod version looks like `<Minecraft version>+<mod version>`, e.g. `1.21.1+1.7.1`.
 
 ---
 
@@ -131,9 +130,11 @@ Made with ❤️ by **[@pycodder](https://modrinth.com/user/pycodder)**
 
 ### Поддержка
 
-Fabric / Quilt + Fabric API, Minecraft **1.21.1 – 1.21.11**, а также сборки **26.1 / 26.2**. Для каждой версии — отдельная сборка (рендеринг интерфейса заметно менялся между версиями), бери ровно под свою игру.
+Fabric / Quilt + Fabric API — Minecraft **1.21.1 – 1.21.11**, **26.1.2**, **26.2**, **26.3**; NeoForge — **1.21.1**, **1.21.3 – 1.21.5**, **1.21.8**, **1.21.10**, **1.21.11**. Для каждой версии — отдельная сборка (рендеринг интерфейса заметно менялся между версиями), бери ровно под свою игру.
 
-**NeoForge:** возможности те же, но нумерация отстаёт на релиз: версия 1.5.0 для NeoForge не выходила, поэтому Fabric **1.7** соответствует NeoForge **1.6**.
+**NeoForge:** возможности те же, а с **1.7.1** — и тот же номер версии, что у Fabric. Только на Fabric остаётся страница мода внутри экрана настроек Sodium.
+
+Дружит с **Sodium**, **Iris**, **[Blur+](https://modrinth.com/mod/blur-plus)** (размытый фон гаснет вместе с закрывающейся панелью) и **[Smooth Scrolling](https://modrinth.com/mod/smooth-scroll)** (подсветка слота прокручивается вместе с предметами).
 
 ### Благодарности
 

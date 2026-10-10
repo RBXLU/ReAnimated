@@ -1,0 +1,13 @@
+package com.pycodder.reanimated.anim;
+
+public enum CascadeOrder {
+    BOTTOM_TO_TOP("Bottom to Top"),
+    TOP_TO_BOTTOM("Top to Bottom"),
+    SIMULTANEOUS("Simultaneous");
+
+    public final String display;
+
+    CascadeOrder(String display) {
+        this.display = display;
+    }
+}

@@ -1,6 +1,11 @@
 {
+  "modmenu.descriptionTranslation.reanimated": "Плавные анимации для всего интерфейса Minecraft: меню и переходы между экранами, контейнеры и инвентарь, кнопки, подсказки, уведомления и логотип.",
   "reanimated.config.title": "ReAnimated — Настройки",
   "reanimated.config.open": "Настройки ReAnimated",
+  "reanimated.section.main": "— Главное —",
+  "reanimated.section.enable": "— Что анимировать —",
+  "reanimated.section.details": "— Подробные настройки —",
+  "reanimated.opt.advanced": "Показывать все настройки",
   "reanimated.section.general": "— Общее —",
   "reanimated.section.menu": "— Экраны меню —",
   "reanimated.section.containers": "— Контейнеры —",

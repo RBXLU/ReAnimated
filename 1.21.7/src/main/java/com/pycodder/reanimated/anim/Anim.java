@@ -22,10 +22,12 @@ public final class Anim {
 
     private static long frameTime = 0L;
     private static boolean frameActive = false;
+    private static long frameId = 0L;
 
     public static void beginFrame() {
         frameTime = System.currentTimeMillis();
         frameActive = true;
+        frameId++;
     }
 
     public static void endFrame() {
@@ -57,8 +59,13 @@ public final class Anim {
 
     public static long closeStartTime = 0L;
     private static float closeStartProgress = 0f;
+    private static float closeOpenness = 1f;
     private static float closeStartElapsedMs = 0f;
     public static volatile boolean bypassClose = false;
+
+    public static Object closeReadyScreen = null;
+
+    public static Object frameGraphics = null;
 
     public static boolean isClosing() {
         return closeStartTime > 0L;
@@ -73,7 +80,11 @@ public final class Anim {
         closeStartProgress = progress(container);
         AnimProfile p = profile();
         float openedMs = currentOpenTime <= 0L ? 0f : (now() - currentOpenTime);
-        closeStartElapsedMs = Math.min(openedMs, p.totalMs(cascadeCount));
+        float total = p.totalMs(cascadeCount);
+        closeStartElapsedMs = Math.min(openedMs, total);
+        float profileOpenness = profileLayerActive(container) && total > 0f
+            ? Easing.clamp01(openedMs / total) : 0f;
+        closeOpenness = Math.max(closeStartProgress, profileOpenness);
         closeStartTime = now();
     }
 
@@ -82,6 +93,8 @@ public final class Anim {
         closeStartTime = 0L;
         closeStartProgress = 0f;
         closeStartElapsedMs = 0f;
+        closeOpenness = 1f;
+        closeReadyScreen = null;
         pendingScreen = null;
         exitDir = 0;
         exitResidualX = 0f;
@@ -111,31 +124,37 @@ public final class Anim {
         return d;
     }
 
-    private static float presetDurationMs(boolean container) {
-        ReAnimatedConfig c = ReAnimatedConfig.get();
-        return presetLayerActive(container) ? duration(c, container) * 1000f : 0f;
-    }
-
     public static boolean presetLayerActive(boolean container) {
         ReAnimatedConfig c = ReAnimatedConfig.get();
         return enabled(c, container) && preset(c, container) != UiPreset.NONE;
     }
 
-    private static float profileDurationMs() {
-        AnimProfile p = profile();
-        return p.enabled ? p.totalMs(cascadeCount) : 0f;
+    public static boolean profileLayerActive(boolean container) {
+        return !container && profile().enabled;
     }
 
-    private static float presetCloseNorm(boolean container) {
-        float d = presetDurationMs(container);
+    public static boolean closeWouldAnimate(boolean container) {
+        return presetLayerActive(container) || profileLayerActive(container);
+    }
+
+    private static float closeWindowMs(boolean container) {
+        ReAnimatedConfig c = ReAnimatedConfig.get();
+        float base = 0f;
+        if (presetLayerActive(container)) base = duration(c, container) * 1000f;
+        if (profileLayerActive(container)) base = Math.max(base, Math.max(1, profile().durationMs));
+        if (base <= 0f) return 0f;
+        return base * Easing.clamp01(closeOpenness);
+    }
+
+    private static float closeNorm(boolean container) {
+        float d = closeWindowMs(container);
         if (d <= 0f) return 1f;
         return Easing.clamp01((now() - closeStartTime) / d);
     }
 
-    private static float profileCloseNorm() {
-        float d = profileDurationMs();
-        if (d <= 0f) return 1f;
-        return Easing.clamp01((now() - closeStartTime) / d);
+    private static float closeEase(boolean container) {
+        ReAnimatedConfig c = ReAnimatedConfig.get();
+        return easingFor(c, container).forExit().apply(closeNorm(container));
     }
 
     private static final long CLOSE_WATCHDOG_MS = 2500L;
@@ -145,9 +164,9 @@ public final class Anim {
         long spent = now() - closeStartTime;
         if (spent >= CLOSE_WATCHDOG_MS) return true;
         if (exitDir != 0) return spent >= transitionDurationMs();
-        float max = Math.max(presetDurationMs(container), profileDurationMs());
-        if (max <= 0f) return true;
-        return spent >= max;
+        float window = closeWindowMs(container);
+        if (window <= 0f) return true;
+        return spent >= window;
     }
 
     public static AnimProfile profile() {
@@ -157,7 +176,7 @@ public final class Anim {
     public static float profileElapsedMs() {
         if (isTransitioning()) return Float.MAX_VALUE;
         if (isClosing()) {
-            return closeStartElapsedMs * (1f - profileCloseNorm());
+            return closeStartElapsedMs * (1f - closeEase(currentIsContainer));
         }
         if (currentOpenTime <= 0L) return Float.MAX_VALUE;
         return now() - currentOpenTime;
@@ -168,7 +187,7 @@ public final class Anim {
     }
 
     private static float virtualOpenProgress(boolean container) {
-        return closeStartProgress * (1f - presetCloseNorm(container));
+        return Easing.clamp01(closeStartProgress * (1f - closeEase(container)));
     }
 
     public static float elapsed(long now) {
@@ -241,8 +260,25 @@ public final class Anim {
         return f != null && f.pause;
     }
 
+    private static Object animCacheScreen = null;
+    private static long animCacheFrame = -1L;
+    private static boolean animCacheValue = false;
+
     public static boolean shouldAnimate(Object screen) {
         if (screen == null) return false;
+        if (frameActive && animCacheFrame == frameId && animCacheScreen == screen) {
+            return animCacheValue;
+        }
+        boolean result = computeShouldAnimate(screen);
+        if (frameActive) {
+            animCacheScreen = screen;
+            animCacheFrame = frameId;
+            animCacheValue = result;
+        }
+        return result;
+    }
+
+    private static boolean computeShouldAnimate(Object screen) {
         ScreenOverride o = ScreenRules.get(screen);
         if (o != null && !o.animate) return false;
         if (ReAnimatedApi.hasFilters()) {
@@ -283,7 +319,34 @@ public final class Anim {
         return isPause(container) ? c.pauseDistance : c.screenOpenDistance;
     }
 
+    private static final long[] LAYER_FRAME = {-1L, -1L};
+    private static final float[] LAYER_X = new float[2];
+    private static final float[] LAYER_Y = new float[2];
+    private static final float[] LAYER_SCALE = new float[2];
+
+    private static int layers(boolean container) {
+        int i = container ? 1 : 0;
+        if (frameActive && LAYER_FRAME[i] == frameId) return i;
+        LAYER_X[i] = computeSlideX(container);
+        LAYER_Y[i] = computeSlideY(container);
+        LAYER_SCALE[i] = computeScale(container);
+        if (frameActive) LAYER_FRAME[i] = frameId;
+        return i;
+    }
+
     public static float slideY(boolean container) {
+        return LAYER_Y[layers(container)];
+    }
+
+    public static float slideX(boolean container) {
+        return LAYER_X[layers(container)];
+    }
+
+    public static float scale(boolean container) {
+        return LAYER_SCALE[layers(container)];
+    }
+
+    private static float computeSlideY(boolean container) {
         if (!container && isTransitioning()) {
             return exitResidualY * (1f - transitionEase());
         }
@@ -298,7 +361,8 @@ public final class Anim {
     }
 
     public static boolean transformActive(boolean container) {
-        return slideY(container) != 0f || slideX(container) != 0f || scale(container) != 1f;
+        int i = layers(container);
+        return LAYER_Y[i] != 0f || LAYER_X[i] != 0f || LAYER_SCALE[i] != 1f;
     }
 
     public static float backgroundFade(boolean container) {
@@ -307,16 +371,14 @@ public final class Anim {
         if (!c.bgFadeEnabled) return 1f;
         float p;
         if (isClosing()) {
-            float d = Math.max(1f, duration(c, container) * 1000f);
-            float norm = Easing.clamp01((now() - closeStartTime) / d);
-            p = closeStartProgress * (1f - norm);
+            p = Easing.clamp01(closeStartProgress * (1f - closeEase(container)));
         } else {
             p = progress(container);
         }
         return Easing.outCubic(p);
     }
 
-    public static float scale(boolean container) {
+    private static float computeScale(boolean container) {
         return presetScale(container) * transitionScale(container);
     }
 
@@ -362,7 +424,7 @@ public final class Anim {
         return -Easing.clamp01((now - currentOpenTime) / d);
     }
 
-    public static float slideX(boolean container) {
+    private static float computeSlideX(boolean container) {
         return presetSlideX(container) + transitionSlideX(container);
     }
 

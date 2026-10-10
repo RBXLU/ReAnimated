@@ -1,4 +1,5 @@
 {
+  "fml.menu.mods.info.description.reanimated": "Плавные анимации для всего интерфейса Minecraft: меню и переходы между экранами, контейнеры и инвентарь, кнопки, подсказки, уведомления и логотип.",
   "reanimated.config.open": "Настройки ReAnimated",
   "reanimated.config.title": "ReAnimated — Настройки",
   "reanimated.editor.alpha": "Нач. прозрачность:",
@@ -71,6 +72,10 @@
   "reanimated.opt.tested_mods": "Протестированные моды",
   "reanimated.section.containers": "— Контейнеры —",
   "reanimated.section.cursor": "— Курсор —",
+  "reanimated.section.main": "— Главное —",
+  "reanimated.section.enable": "— Что анимировать —",
+  "reanimated.section.details": "— Подробные настройки —",
+  "reanimated.opt.advanced": "Показывать все настройки",
   "reanimated.section.general": "— Общее —",
   "reanimated.section.logo": "— Логотип —",
   "reanimated.section.menu": "— Экраны меню —",

@@ -61,8 +61,13 @@ public abstract class HandledScreenMixin implements com.pycodder.reanimated.anim
         }
     }
 
-    @Inject(method = "render", at = @At("RETURN"))
-    private void reanimated$highlight(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+    @Inject(method = "drawSlotHighlightFront", at = @At("RETURN"))
+    private void reanimated$highlight(DrawContext context, CallbackInfo ci) {
+        reanimated$drawHighlight(context);
+    }
+
+    @Unique
+    private void reanimated$drawHighlight(DrawContext context) {
         ReAnimatedConfig c = ReAnimatedConfig.get();
         if (!c.slotHighlightEnabled) {
             reanimated$slotX = Float.NaN;
@@ -76,10 +81,10 @@ public abstract class HandledScreenMixin implements com.pycodder.reanimated.anim
             return;
         }
 
-        float targetX = this.x + slot.x;
-        float targetY = this.y + slot.y;
+        float targetX = slot.x;
+        float targetY = slot.y;
 
-        long now = System.currentTimeMillis();
+        long now = Anim.now();
         float dt = reanimated$slotTime == 0L ? 0f : (now - reanimated$slotTime) / 1000f;
         if (dt > 0.2f) dt = 0.2f;
         reanimated$slotTime = now;

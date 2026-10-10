@@ -61,8 +61,23 @@ public abstract class HandledScreenMixin implements com.pycodder.reanimated.anim
         }
     }
 
-    @Inject(method = "render", at = @At("RETURN"))
+    @Inject(method = "render", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/gui/screen/ingame/HandledScreen;drawSlotHighlight(Lnet/minecraft/client/gui/DrawContext;III)V",
+            shift = At.Shift.AFTER))
     private void reanimated$highlight(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        reanimated$drawHighlight(context);
+    }
+
+    @Inject(method = "render", at = @At("RETURN"))
+    private void reanimated$highlightReset(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        if (this.focusedSlot == null || !ReAnimatedConfig.get().slotHighlightEnabled) {
+            reanimated$slotX = Float.NaN;
+            reanimated$slotY = Float.NaN;
+        }
+    }
+
+    @Unique
+    private void reanimated$drawHighlight(DrawContext context) {
         ReAnimatedConfig c = ReAnimatedConfig.get();
         if (!c.slotHighlightEnabled) {
             reanimated$slotX = Float.NaN;
@@ -76,10 +91,10 @@ public abstract class HandledScreenMixin implements com.pycodder.reanimated.anim
             return;
         }
 
-        float targetX = this.x + slot.x;
-        float targetY = this.y + slot.y;
+        float targetX = slot.x;
+        float targetY = slot.y;
 
-        long now = System.currentTimeMillis();
+        long now = Anim.now();
         float dt = reanimated$slotTime == 0L ? 0f : (now - reanimated$slotTime) / 1000f;
         if (dt > 0.2f) dt = 0.2f;
         reanimated$slotTime = now;

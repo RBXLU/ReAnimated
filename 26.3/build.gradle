@@ -1,0 +1,67 @@
+plugins {
+    id 'net.fabricmc.fabric-loom' version "${loom_version}"
+    id 'java'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
+repositories {
+    maven { url = 'https://maven.fabricmc.net/' }
+    maven {
+        url = 'https://maven.terraformersmc.com/releases/'
+        // POM у terraformersmc периодически отдаёт 502 (jar при этом доступен) —
+        // резолвим ModMenu по артефакту, чтобы сборка не падала из-за флапающего .pom.
+        metadataSources { artifact() }
+    }
+    maven {
+        url = 'https://api.modrinth.com/maven'
+        content { includeGroup 'maven.modrinth' }
+    }
+    mavenCentral()
+}
+
+// Minecraft 26.x ships de-obfuscated (official names) — no yarn/intermediary mappings,
+// so we don't declare `mappings` and use plain `implementation` (no remap step).
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    // ModMenu — только для компиляции интеграции; не тащим в jar, не делаем зависимостью.
+    // 26.x уже деобфусцирован, поэтому обычный compileOnly (без remap).
+    compileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
+    // Sodium — только для компиляции страницы настроек внутри его экрана.
+    compileOnly "maven.modrinth:sodium:${project.sodium_version}"
+}
+
+processResources {
+    inputs.property "version", project.version
+    inputs.property "description", project.mod_description
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version, "description": project.mod_description
+    }
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+    withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding = "UTF-8"
+    it.options.release = 25
+}
+
+jar {
+    from("LICENSE") {
+        rename { "${it}_${project.archives_base_name}" }
+    }
+}

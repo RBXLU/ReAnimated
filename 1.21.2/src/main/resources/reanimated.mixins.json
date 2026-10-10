@@ -4,6 +4,7 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "ScreenMixin",
+    "ScreenBackgroundMixin",
     "ClickableWidgetMixin",
     "EntryListWidgetMixin",
     "PressableWidgetMixin",

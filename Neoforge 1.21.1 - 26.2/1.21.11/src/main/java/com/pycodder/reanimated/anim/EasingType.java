@@ -15,6 +15,17 @@ public enum EasingType {
         this.display = display;
     }
 
+    public EasingType forExit() {
+        switch (this) {
+            case OUT_BACK:
+            case OUT_ELASTIC:
+            case OUT_BOUNCE:
+                return OUT_CUBIC;
+            default:
+                return this;
+        }
+    }
+
     public float apply(float t) {
         switch (this) {
             case LINEAR:    return Easing.clamp01(t);

@@ -62,14 +62,17 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
 
     @Unique private static final float REANIMATED$MIN_ALPHA = 4f / 255f;
 
+    @Unique private float reanimated$ease = Float.NaN;
+
     @Unique
     private boolean reanimated$tooFaint() {
         AnimProfile p = ReAnimatedConfig.get().profile;
         if (!p.enabled || reanimated$rank < 0) {
+            reanimated$ease = Float.NaN;
             return false;
         }
-        float own = Anim.profileEase(p.slotFor(reanimated$rank, reanimated$count));
-        return this.alpha * p.alphaAt(own) < REANIMATED$MIN_ALPHA;
+        reanimated$ease = Anim.profileEase(p.slotFor(reanimated$rank, reanimated$count));
+        return this.alpha * p.alphaAt(reanimated$ease) < REANIMATED$MIN_ALPHA;
     }
 
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
@@ -152,8 +155,9 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
             return;
         }
 
-        int slot = p.slotFor(reanimated$rank, reanimated$count);
-        float own = Anim.profileEase(slot);
+        float own = Float.isNaN(reanimated$ease)
+            ? Anim.profileEase(p.slotFor(reanimated$rank, reanimated$count))
+            : reanimated$ease;
 
         float a = p.alphaAt(own);
         if (a < 1f) {
@@ -181,13 +185,16 @@ public abstract class ClickableWidgetMixin implements CascadeTarget {
             return;
         }
 
-        long now = System.currentTimeMillis();
+        long now = Anim.now();
         float dt = reanimated$lastTime == 0L ? 0f : (now - reanimated$lastTime) / 1000f;
         if (dt > 0.2f) dt = 0.2f;
         reanimated$lastTime = now;
 
         float target = isHovered() ? 1f : 0f;
-        reanimated$hover = Easing.approach(reanimated$hover, target, dt, c.hoverSpeed);
+        if (reanimated$hover != target) {
+            reanimated$hover = Easing.approach(reanimated$hover, target, dt, c.hoverSpeed);
+            if (Math.abs(reanimated$hover - target) < 0.001f) reanimated$hover = target;
+        }
 
         if (reanimated$hover < 0.001f) {
             return;

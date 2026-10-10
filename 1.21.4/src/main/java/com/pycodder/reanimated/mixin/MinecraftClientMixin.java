@@ -50,9 +50,9 @@ public abstract class MinecraftClientMixin {
 
         boolean container = current instanceof HandledScreen;
         Anim.currentIsPause = Anim.isPauseScreen(current);
-        boolean presetActive = Anim.presetLayerActive(container);
-        boolean profileActive = c.profile.enabled;
-        if (!presetActive && !profileActive) return;
+        Anim.currentOverride = ScreenRules.get(current);
+        if (!Anim.shouldAnimate(current)) return;
+        if (!Anim.closeWouldAnimate(container)) return;
 
         Anim.beginClose(container);
         ci.cancel();
