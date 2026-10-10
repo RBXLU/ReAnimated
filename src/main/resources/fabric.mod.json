@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "reanimated",
+  "version": "${version}",
+  "name": "ReAnimated",
+  "description": "${description}",
+  "authors": [
+    "pycodder"
+  ],
+  "contact": {},
+  "license": "MIT",
+  "icon": "assets/reanimated/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.pycodder.reanimated.ReAnimatedClient"
+    ],
+    "modmenu": [
+      "com.pycodder.reanimated.ReAnimatedModMenu"
+    ],
+    "sodium:config_api_user": [
+      "com.pycodder.reanimated.compat.SodiumIntegration"
+    ]
+  },
+  "mixins": [
+    "reanimated.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~26.3",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}
