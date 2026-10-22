@@ -17,6 +17,16 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+/**
+ * Контейнерные экраны (NeoForge / Mojmap). Весь экран (панель, слоты, МОДЕЛЬ ИГРОКА —
+ * всё рисуется внутри renderWithTooltipAndSubtitles) выезжает/масштабируется вместе через ScreenMixin.
+ * Здесь:
+ *  - возвращаем РАЗМЫТЫЙ ФОН на место ОБРАТНОЙ трансформацией (масштаб+сдвиг)
+ *    вокруг renderBackground, снимая её прямо перед отрисовкой панели (renderBg) — так
+ *    панель и модель игрока едут вместе со слотами, а блюр стоит;
+ *  - рисуем плавно догоняющую курсор подсветку слота;
+ *  - отдаём границы панели каскаду вкладок креатива ({@link PanelBounds}).
+ */
 @Mixin(AbstractContainerScreen.class)
 public abstract class HandledScreenMixin implements PanelBounds {
 
@@ -46,6 +56,8 @@ public abstract class HandledScreenMixin implements PanelBounds {
     @Unique private float reanimated$slotX = Float.NaN;
     @Unique private float reanimated$slotY = Float.NaN;
     @Unique private long reanimated$slotTime = 0L;
+    /** Сдвинута ли сейчас ванильная подсветка: стек матриц надо вернуть на выходе. */
+    @Unique private boolean reanimated$highlightPushed = false;
 
     @Inject(method = "renderBackground", at = @At("HEAD"))
     private void reanimated$blurPush(GuiGraphics graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
@@ -64,39 +76,81 @@ public abstract class HandledScreenMixin implements PanelBounds {
         }
     }
 
-    @Inject(method = "render", at = @At("RETURN"))
-    private void reanimated$highlight(GuiGraphics graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+    /*
+     * Плавная подсветка слота — это ванильная подсветка, сдвинутая туда, где сейчас едет
+     * рамка. Свою поверх мы не рисуем: иначе под курсором лежали бы сразу две подсветки —
+     * ванильная, которая перескакивает, и наша, которая её догоняет, — и слот выходил
+     * почти белым. Так подсветка выглядит ровно как в ванили или в ресурспаке (у паков
+     * в стиле OreUI это рамка с обводкой), только переезжает плавно.
+     *
+     * Ваниль рисует подсветку в координатах ПАНЕЛИ ({@code slot.x, slot.y}): матрица к
+     * этому моменту уже сдвинута на угол контейнера. Наш сдвиг ложится внутрь, поэтому
+     * всё, что другой мод кладёт вокруг ванильной подсветки (например, сдвиг сетки на
+     * долю слота и обрезку при плавной прокрутке), достаётся и ей.
+     * Задняя часть подсветки рисуется до предметов, передняя — после них; сдвигаются обе.
+     */
+    @Inject(method = "renderSlotHighlightBack", at = @At("HEAD"))
+    private void reanimated$highlightBackHead(GuiGraphics graphics, CallbackInfo ci) {
+        reanimated$pushHighlight(graphics, this.hoveredSlot);
+    }
+
+    @Inject(method = "renderSlotHighlightBack", at = @At("RETURN"))
+    private void reanimated$highlightBackTail(GuiGraphics graphics, CallbackInfo ci) {
+        reanimated$popHighlight(graphics);
+    }
+
+    @Inject(method = "renderSlotHighlightFront", at = @At("HEAD"))
+    private void reanimated$highlightFrontHead(GuiGraphics graphics, CallbackInfo ci) {
+        reanimated$pushHighlight(graphics, this.hoveredSlot);
+    }
+
+    @Inject(method = "renderSlotHighlightFront", at = @At("RETURN"))
+    private void reanimated$highlightFrontTail(GuiGraphics graphics, CallbackInfo ci) {
+        reanimated$popHighlight(graphics);
+    }
+
+    /**
+     * Сдвигает ванильную подсветку слота {@code slot} к точке, где сейчас плавно едет
+     * рамка. Когда рамка уже на месте, ничего не делает.
+     */
+    @Unique
+    private void reanimated$pushHighlight(GuiGraphics graphics, Slot slot) {
+        reanimated$highlightPushed = false;
         ReAnimatedConfig c = ReAnimatedConfig.get();
-        if (!c.slotHighlightEnabled) {
+        if (!c.slotHighlightEnabled || c.pvpMode) {
             reanimated$slotX = Float.NaN;
             return;
         }
-
-        Slot slot = this.hoveredSlot;
         if (slot == null) {
             reanimated$slotX = Float.NaN;
             reanimated$slotY = Float.NaN;
             return;
         }
 
-        float targetX = this.leftPos + slot.x;
-        float targetY = this.topPos + slot.y;
-
-        long now = System.currentTimeMillis();
+        long now = Anim.now();
         float dt = reanimated$slotTime == 0L ? 0f : (now - reanimated$slotTime) / 1000f;
         if (dt > 0.2f) dt = 0.2f;
         reanimated$slotTime = now;
 
         if (Float.isNaN(reanimated$slotX)) {
-            reanimated$slotX = targetX;
-            reanimated$slotY = targetY;
+            reanimated$slotX = slot.x;
+            reanimated$slotY = slot.y;
         } else {
-            reanimated$slotX = Easing.approach(reanimated$slotX, targetX, dt, c.slotHighlightSpeed);
-            reanimated$slotY = Easing.approach(reanimated$slotY, targetY, dt, c.slotHighlightSpeed);
+            reanimated$slotX = Easing.approach(reanimated$slotX, slot.x, dt, c.slotHighlightSpeed);
+            reanimated$slotY = Easing.approach(reanimated$slotY, slot.y, dt, c.slotHighlightSpeed);
         }
 
-        int ix = Math.round(reanimated$slotX);
-        int iy = Math.round(reanimated$slotY);
-        graphics.fill(ix, iy, ix + 16, iy + 16, 0x80FFFFFF);
+        int dx = Math.round(reanimated$slotX) - slot.x;
+        int dy = Math.round(reanimated$slotY) - slot.y;
+        if (dx == 0 && dy == 0) return;
+        UiTransform.pushAppear(graphics.pose(), 0f, 0f, 1f, dx, dy);
+        reanimated$highlightPushed = true;
+    }
+
+    @Unique
+    private void reanimated$popHighlight(GuiGraphics graphics) {
+        if (!reanimated$highlightPushed) return;
+        reanimated$highlightPushed = false;
+        UiTransform.popAppear(graphics.pose());
     }
 }
