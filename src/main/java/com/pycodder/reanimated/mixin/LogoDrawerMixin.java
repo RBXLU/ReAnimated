@@ -15,6 +15,16 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+/**
+ * Анимация логотипа "Minecraft" на главном экране (NeoForge / Mojmap, эпоха 1.21.1 —
+ * PoseStack + blit с setColor).
+ *
+ * Два стиля (config.logoStyle):
+ *  - GROW    — родная анимация мода: логотип целиком "вырастает" с отскоком;
+ *  - LETTERS — побуквенный каскад: девять букв влетают/проявляются по очереди
+ *              (идея и текстуры букв — из EaseGUI, LGPLv3). В этом режиме ванильная
+ *              отрисовка логотипа отменяется, буквы и edition-текст рисуем сами.
+ */
 @Mixin(LogoRenderer.class)
 public class LogoDrawerMixin {
 
@@ -22,6 +32,7 @@ public class LogoDrawerMixin {
 
     @Unique private static ResourceLocation[] reanimated$letters;
 
+    /** Лениво собирает ResourceLocation'ы букв (без статического инициализатора — безопаснее для миксина). */
     @Unique
     private static ResourceLocation[] reanimated$letters() {
         ResourceLocation[] a = reanimated$letters;
@@ -41,22 +52,23 @@ public class LogoDrawerMixin {
         reanimated$pushed = false;
         ReAnimatedConfig c = ReAnimatedConfig.get();
         if (!c.logoEnabled) {
-            return;
+            return; // мод не трогает логотип — ваниль рисует как есть
         }
 
         if (c.logoStyle == LogoStyle.LETTERS) {
             reanimated$drawLetters(graphics, screenWidth, alpha, c);
-            ci.cancel();
+            ci.cancel(); // логотип целиком отрисован нами
             return;
         }
 
-        float elapsed = Anim.elapsed(System.currentTimeMillis());
+        // --- Стиль GROW: логотип целиком вырастает с отскоком ---
+        float elapsed = Anim.logoElapsed(System.currentTimeMillis(), alpha);
         if (elapsed == Float.MAX_VALUE) {
             return;
         }
         float p = elapsed / Math.max(0.01f, c.logoDuration);
         if (p >= 1f) {
-            return;
+            return; // анимация закончилась — без трансформаций
         }
 
         float scaleY = c.logoEasing.apply(p);
@@ -76,7 +88,7 @@ public class LogoDrawerMixin {
     @Unique
     private void reanimated$drawLetters(GuiGraphics graphics, int screenWidth, float alpha, ReAnimatedConfig c) {
         AnimProfile p = c.profileLogo;
-        float e = Anim.elapsed(System.currentTimeMillis());
+        float e = Anim.logoElapsed(System.currentTimeMillis(), alpha);
         float elapsedMs = (e == Float.MAX_VALUE) ? Float.MAX_VALUE : e * 1000f;
 
         int boxX = screenWidth / 2 - LogoLetters.LOGO_WIDTH / 2;
@@ -106,6 +118,7 @@ public class LogoDrawerMixin {
                 matrices.popPose();
             }
         }
+        // edition-текст ("Java Edition") — рисуем статично под логотипом
         graphics.setColor(1f, 1f, 1f, alpha);
         graphics.blit(LogoRenderer.MINECRAFT_EDITION,
                 screenWidth / 2 - 64, boxY + LogoLetters.LOGO_HEIGHT - 7, 0f, 0f,
