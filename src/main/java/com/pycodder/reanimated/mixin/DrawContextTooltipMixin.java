@@ -17,9 +17,21 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.List;
 
+/**
+ * Появление всплывающей подсказки: она коротко вырастает у курсора вместо того,
+ * чтобы возникать мгновенно.
+ *
+ * Точка входа выбрана самая нижняя: все перегрузки — от простого текста до подсказки
+ * предмета, и отложенная отрисовка тоже — в итоге сходятся сюда. Один хук вместо
+ * десятка, и подсказки из модов (они зовут те же методы) анимируются заодно.
+ *
+ * Кадр без подсказки в состоянии не отражается, поэтому «когда она появилась»
+ * считает {@link TooltipAnim} по разрывам между кадрами.
+ */
 @Mixin(GuiGraphicsExtractor.class)
 public abstract class DrawContextTooltipMixin {
 
+    /** Наложена ли трансформация в этом вызове — снимать её нужно ровно столько же раз. */
     @Unique private boolean reanimated$tooltipPushed = false;
 
     @Inject(method = "tooltip", at = @At("HEAD"))
@@ -28,14 +40,16 @@ public abstract class DrawContextTooltipMixin {
                                         Identifier texture,
                                         CallbackInfo ci) {
         ReAnimatedConfig c = ReAnimatedConfig.get();
-        if (!c.tooltipEnabled) return;
+        if (!c.tooltipEnabled || c.pvpMode) return;
 
         float p = TooltipAnim.progress(components == null ? 0 : components.size());
-        if (p >= 1f) return;
+        if (p >= 1f) return; // подсказка уже «доехала» — кадр не трогаем вовсе
 
         float e = c.tooltipEasing.apply(p);
         float scale = Easing.lerp(c.tooltipScale, 1f, e);
         float dy = (1f - e) * c.tooltipOffsetY;
+        // Масштабируем вокруг точки, к которой подсказка привязана (курсор): так она
+        // вырастает от предмета, а не из своего левого верхнего угла.
         UiTransform.pushPopup(((GuiGraphicsExtractor) (Object) this).pose(), x, y, scale, dy);
         reanimated$tooltipPushed = true;
     }
