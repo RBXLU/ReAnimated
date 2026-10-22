@@ -1,31 +1,36 @@
 package com.pycodder.reanimated.config;
 
-import com.pycodder.reanimated.anim.ScreenOverride;
+import com.pycodder.reanimated.ReAnimatedKeys;
 import com.pycodder.reanimated.anim.ScreenRules;
-import com.pycodder.reanimated.anim.UiPreset;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 
+import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Список экранов и модов, которым можно задать свои настройки. Каждый пункт открывает
+ * {@link ScreenSettingsScreen}; настроенные подсвечены зелёным.
+ *
+ * Список составляется из экранов, которые игрок открывал в этом запуске, плюс тех,
+ * для которых настройки уже заданы: перечислить все экраны сборки заранее неоткуда,
+ * они появляются только когда их создаёт игра или мод. Свежие — сверху.
+ *
+ * Экран самодостаточный, как и остальные экраны мода на Mojmap: только кнопки и
+ * ручная раскладка, без OptionsList и прокрутки — вместо неё постраничный список,
+ * поэтому один и тот же код работает на всех поддерживаемых версиях.
+ */
 public class ScreenRulesScreen extends Screen {
 
-    private static final UiPreset[] PRESETS = reanimated$presetValues();
-
-    private static UiPreset[] reanimated$presetValues() {
-        UiPreset[] main = UiPreset.MAIN;
-        UiPreset[] out = new UiPreset[main.length + 1];
-        out[0] = UiPreset.INHERIT;
-        System.arraycopy(main, 0, out, 1, main.length);
-        return out;
-    }
-
-    private static final int[] SPEEDS = {0, 2, 3, 4, 6, 8, 10, 14, 20, 30};
-
-    private static final int ROWS_PER_PAGE = 7;
+    private static final int ROW = 22;
+    private static final int TOP = 58;
 
     private final Screen parent;
+    /** Открытая страница списка; статическая, чтобы возврат на экран не сбрасывал её. */
     private static int page = 0;
 
     public ScreenRulesScreen(Screen parent) {
@@ -35,23 +40,27 @@ public class ScreenRulesScreen extends Screen {
 
     @Override
     protected void init() {
-        List<String> keys = ScreenRules.listForEditor();
-        int pages = Math.max(1, (keys.size() + ROWS_PER_PAGE - 1) / ROWS_PER_PAGE);
+        text(this.title, 12);
+        text(Component.translatable("reanimated.screens.hint").withStyle(ChatFormatting.GRAY), 26);
+        text(Component.translatable("reanimated.screens.hint_key",
+            ReAnimatedKeys.SCREEN_SETTINGS.getTranslatedKeyMessage()).withStyle(ChatFormatting.GRAY), 38);
+
+        // Сначала правила модов, затем отдельные экраны.
+        List<String> keys = new ArrayList<>(ScreenRules.modsForEditor());
+        keys.addAll(ScreenRules.listForEditor());
+        int perPage = Math.max(1, (this.height - 60 - TOP) / ROW);
+        int pages = Math.max(1, (keys.size() + perPage - 1) / perPage);
         if (page >= pages) page = pages - 1;
         if (page < 0) page = 0;
 
-        int colGap = 8;
-        int colW = Math.min(200, (this.width - 40 - colGap) / 2);
-        int speedW = Math.min(110, colW);
-        int totalW = colW + colGap + speedW;
-        int startX = (this.width - totalW) / 2;
-        int y = 44;
-
-        for (int i = page * ROWS_PER_PAGE; i < Math.min(keys.size(), (page + 1) * ROWS_PER_PAGE); i++) {
+        int w = Math.min(310, this.width - 40);
+        int x = (this.width - w) / 2;
+        int y = TOP;
+        for (int i = page * perPage; i < Math.min(keys.size(), (page + 1) * perPage); i++) {
             String key = keys.get(i);
-            addRenderableWidget(presetButton(key, startX, y, colW));
-            addRenderableWidget(speedButton(key, startX + colW + colGap, y, speedW));
-            y += 22;
+            addRenderableWidget(Button.builder(label(key), b -> this.minecraft.setScreen(new ScreenSettingsScreen(this, key)))
+                .bounds(x, y, w, 20).build());
+            y += ROW;
         }
 
         int navY = this.height - 52;
@@ -75,60 +84,22 @@ public class ScreenRulesScreen extends Screen {
             .bounds(this.width / 2 - 100, this.height - 26, 200, 20).build());
     }
 
-    private Button presetButton(String key, int x, int y, int w) {
-        return Button.builder(presetLabel(key), b -> {
-            ScreenOverride o = ScreenRules.getOrCreate(key);
-            int i = 0;
-            UiPreset cur = o.animate ? (o.preset == null ? UiPreset.INHERIT : o.preset) : UiPreset.INHERIT;
-            for (int k = 0; k < PRESETS.length; k++) {
-                if (PRESETS[k] == cur) i = k;
-            }
-            int next = o.animate ? i + 1 : 0;
-            if (next >= PRESETS.length) {
-                o.animate = false;
-                o.preset = UiPreset.INHERIT;
-            } else {
-                o.animate = true;
-                o.preset = PRESETS[next];
-            }
-            ScreenRules.prune();
-            ReAnimatedConfig.get().save();
-            b.setMessage(presetLabel(key));
-        }).bounds(x, y, w, 20).build();
+    /** Строка текста по центру экрана. */
+    private void text(Component text, int y) {
+        int w = this.font.width(text);
+        addRenderableWidget(new StringWidget((this.width - w) / 2, y, w, 9, text, this.font));
     }
 
-    private Button speedButton(String key, int x, int y, int w) {
-        return Button.builder(speedLabel(key), b -> {
-            ScreenOverride o = ScreenRules.getOrCreate(key);
-            int i = 0;
-            for (int k = 0; k < SPEEDS.length; k++) {
-                if (SPEEDS[k] == o.speedTicks) i = k;
-            }
-            o.speedTicks = SPEEDS[(i + 1) % SPEEDS.length];
-            ScreenRules.prune();
-            ReAnimatedConfig.get().save();
-            b.setMessage(speedLabel(key));
-        }).bounds(x, y, w, 20).build();
-    }
-
-    private Component presetLabel(String key) {
-        ScreenOverride o = ReAnimatedConfig.get().screenOverrides.get(key);
-        String value;
-        if (o == null || (o.animate && (o.preset == null || o.preset == UiPreset.INHERIT))) {
-            value = "—";
-        } else if (!o.animate) {
-            value = "OFF";
-        } else {
-            value = o.preset.display;
+    /** Подпись пункта: моды помечены, настроенные — зелёные. */
+    private static Component label(String key) {
+        MutableComponent name = Component.literal(ScreenRules.displayName(key));
+        if (ScreenRules.isModKey(key)) {
+            name = Component.translatable("reanimated.screens.mod_title", ScreenRules.displayName(key));
+        } else if (ScreenRules.isModded(key)) {
+            name = name.append(Component.literal(" ").append(
+                Component.translatable("reanimated.screens.modded").withStyle(ChatFormatting.DARK_GRAY)));
         }
-        return Component.literal(ScreenRules.displayName(key) + ": " + value);
-    }
-
-    private Component speedLabel(String key) {
-        ScreenOverride o = ReAnimatedConfig.get().screenOverrides.get(key);
-        int ticks = o == null ? 0 : o.speedTicks;
-        return Component.translatable("reanimated.screens.speed").append(
-            Component.literal(ticks <= 0 ? ": —" : ": " + ticks + " t"));
+        return name.withStyle(ScreenRules.customized(key) ? ChatFormatting.GREEN : ChatFormatting.WHITE);
     }
 
     @Override
