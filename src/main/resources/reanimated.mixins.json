@@ -16,6 +16,13 @@
     "DrawContextEntityMixin",
     "DrawContextTooltipMixin",
     "ToastEntryMixin",
+    "InGameHudMixin",
+    "TabNavigationWidgetMixin",
+    "TabManagerMixin",
+    "SliderWidgetMixin",
+    "CheckboxWidgetMixin",
+    "TextFieldWidgetMixin",
+    "ScreenKeysMixin",
     "compat.EmiStackBatcherMixin"
   ],
   "injectors": {
