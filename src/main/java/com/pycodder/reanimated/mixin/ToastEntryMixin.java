@@ -11,6 +11,16 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+/**
+ * Выезд уведомлений (достижения, рецепты, системные сообщения) по выбранной кривой.
+ *
+ * Ваниль хранит долю ширины, на которую уведомление уже вылезло на экран, и считает её
+ * жёстко: квадрат от времени за 600 мс. Мод не заводит своего таймера, а на время
+ * отрисовки подменяет это значение пересчитанным ({@link ToastAnim#remap}) и сразу
+ * возвращает исходное обратно — так ванильный расчёт остаётся единственным хозяином
+ * таймингов, а пересчёт не может наложиться сам на себя, сколько бы раз за кадр ни
+ * рисовали уведомление.
+ */
 @Mixin(targets = "net.minecraft.client.gui.components.toasts.ToastManager$ToastInstance")
 public abstract class ToastEntryMixin {
 
@@ -18,6 +28,7 @@ public abstract class ToastEntryMixin {
 
     @Shadow Toast.Visibility visibility;
 
+    /** Ванильное значение на время отрисовки. NaN — подмены не было. */
     @Unique private float reanimated$originalPortion = Float.NaN;
 
     @Inject(method = "render", at = @At("HEAD"))
