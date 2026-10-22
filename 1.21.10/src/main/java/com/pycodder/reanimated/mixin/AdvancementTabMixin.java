@@ -14,9 +14,22 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+/**
+ * Плавное появление вкладок экрана достижений: вкладки выезжают из-за окна по очереди.
+ *
+ * Вкладки достижений — это верхний ряд (над окном): выезжают СНИЗУ (из-за верхнего края окна
+ * вверх). Пока вкладка «за окном», она обрезается (scissor по верхнему краю окна) — фон/иконка
+ * не видны, пока не выедут. (Тип вкладки {@code AdvancementTabType} package-private и недоступен,
+ * поэтому все вкладки трактуем как верхние — это и есть обычный случай.)
+ *
+ * Оборачиваем обе точки отрисовки КНОПКИ-вкладки — фон ({@code drawBackground}) и иконку
+ * ({@code drawIcon}) — одним сдвигом по её {@code getIndex()}. Эффект «появления» даёт обрезка
+ * за окном, без альфы (код одинаков на всех эпохах). Идея — из EaseGUI (Weyne1, LGPLv3).
+ */
 @Mixin(AdvancementTab.class)
 public abstract class AdvancementTabMixin {
 
+    /** Высота окна достижений (AdvancementsScreen.WINDOW_HEIGHT). */
     @Unique private static final int REANIMATED$WINDOW_HEIGHT = 140;
 
     @Shadow public abstract int getIndex();
@@ -44,15 +57,17 @@ public abstract class AdvancementTabMixin {
         float elapsedMs = e * 1000f;
         float eased = p.progress(elapsedMs, getIndex());
         if (p.identityAt(eased)) {
-            return;
+            return; // вкладка на месте
         }
 
+        // Верхний ряд: выезжают снизу (+), поднимаясь на место.
         float dy = (1f - eased) * p.offsetY;
 
         MinecraftClient mc = MinecraftClient.getInstance();
         int sw = mc.getWindow().getScaledWidth();
-        int winY = (mc.getWindow().getScaledHeight() - REANIMATED$WINDOW_HEIGHT) / 2;
+        int winY = (mc.getWindow().getScaledHeight() - REANIMATED$WINDOW_HEIGHT) / 2; // окно центрировано
 
+        // Обрезка по верхнему краю окна: вкладку видно только над окном.
         context.enableScissor(0, 0, sw, winY);
         Matrix3x2fStack m = context.getMatrices();
         m.pushMatrix();

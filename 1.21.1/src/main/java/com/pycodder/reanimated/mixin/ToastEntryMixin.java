@@ -9,6 +9,13 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+/**
+ * Выезд уведомлений (достижения, рецепты, системные сообщения) по выбранной кривой.
+ *
+ * В этой версии игры доля видимой ширины не хранится полем, а считается на каждый кадр
+ * ({@code getDisappearProgress}) — поэтому кривая подменяется прямо в возвращаемом
+ * значении. Тайминги остаются ванильными, меняется только характер движения.
+ */
 @Mixin(targets = "net.minecraft.client.toast.ToastManager$Entry")
 public abstract class ToastEntryMixin {
 

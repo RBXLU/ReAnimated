@@ -15,6 +15,16 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+/**
+ * Плавное появление вкладок креативного инвентаря: вкладки выезжают из-за плашки по очереди.
+ *
+ * По ряду задаётся направление: верхние вкладки выезжают СНИЗУ (из-за верхнего края панели
+ * вверх), нижние — СВЕРХУ (из-за нижнего края вниз). Пока вкладка «за плашкой», она обрезается
+ * (scissor по краю панели) — иконки/фон не видны, пока не выедут. Порядок каскада — по столбцу.
+ *
+ * Эпоха 1.21.1: 3D MatrixStack, прозрачность через setShaderColor (изолирована флашем от
+ * батча предметов). Идея — из EaseGUI (Weyne1, LGPLv3), переписано под системы ReAnimated.
+ */
 @Mixin(CreativeInventoryScreen.class)
 public class CreativeInventoryScreenMixin {
 
@@ -41,10 +51,11 @@ public class CreativeInventoryScreenMixin {
         float elapsedMs = e * 1000f;
         float eased = p.progress(elapsedMs, group.getColumn());
         if (p.identityAt(eased)) {
-            return;
+            return; // вкладка на месте
         }
 
         boolean top = group.getRow() == ItemGroup.Row.TOP;
+        // Верхние выезжают снизу (+, всплывают), нижние — сверху (−, опускаются).
         float dy = (1f - eased) * p.offsetY;
         if (!top) dy = -dy;
 
@@ -53,6 +64,8 @@ public class CreativeInventoryScreenMixin {
         int sh = mc.getWindow().getScaledHeight();
 
         PanelBounds panel = (PanelBounds) (Object) this;
+        // Обрезка «за плашкой»: показываем вкладку только вне прямоугольника панели.
+        // enableScissor ваниль (1.21.4+) сама мапит текущей матрицей → ляжет по видимой панели.
         if (top) {
             context.enableScissor(0, 0, sw, panel.reanimated$panelTop());
         } else {

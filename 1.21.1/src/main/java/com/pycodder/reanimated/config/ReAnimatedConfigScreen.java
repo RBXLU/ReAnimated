@@ -20,6 +20,7 @@ import net.minecraft.util.Util;
 import java.net.URI;
 import java.util.function.Consumer;
 
+/** Экран настроек мода: слайдеры/переключатели для каждой анимации + ссылка на автора. */
 public class ReAnimatedConfigScreen extends GameOptionsScreen {
 
     private static final String AUTHOR_URL = "https://modrinth.com/user/pycodder";
@@ -32,21 +33,28 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
     private static final Text IMPORT = Text.translatable("reanimated.opt.import");
     private static final Text SCREENS = Text.translatable("reanimated.opt.screens");
 
+    /** Сообщение о результате обмена настройками и время его показа. */
     private Text notice = null;
     private long noticeTime = 0L;
     private static final long NOTICE_MS = 4000L;
 
+    /** Состав списка изменился — пересобрать его в начале следующего кадра. */
     private boolean reanimated$rebuild = false;
 
     public ReAnimatedConfigScreen(Screen parent) {
         super(parent, MinecraftClient.getInstance().options, Text.translatable("reanimated.config.title"));
     }
 
+    /** Кладёт все настройки в буфер обмена одной строкой — можно передать другому игроку. */
     private void exportSettings() {
         this.client.keyboard.setClipboard(ReAnimatedConfig.get().toShareString());
         this.showNotice("reanimated.opt.export.done", false);
     }
 
+    /**
+     * Забирает настройки из буфера обмена. Экран после этого пересобирается: слайдеры
+     * читают значения в момент создания, иначе они показывали бы старые.
+     */
     private void importSettings() {
         String text = this.client.keyboard.getClipboard();
         if (ReAnimatedConfig.applyShareString(text)) {
@@ -54,7 +62,7 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
             Text saved = this.notice;
             long savedTime = this.noticeTime;
             this.clearAndInit();
-            this.notice = saved;
+            this.notice = saved;       // clearAndInit() создаёт опции заново, сообщение переживает это
             this.noticeTime = savedTime;
         } else {
             this.showNotice("reanimated.opt.import.failed", true);
@@ -71,8 +79,14 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
     protected void addOptions() {
         ReAnimatedConfig c = ReAnimatedConfig.get();
 
+        // Порядок секций — по тому, как часто в них заглядывают: сверху то, что меняют
+        // чаще всего, — общий вид анимации и список «что анимировать вообще», — а
+        // подробные слайдеры каждого слоя разворачиваются переключателем в конце списка
+        // (он же помнится в конфиге). Иначе пресет и скорость пришлось бы искать среди
+        // шести десятков слайдеров тонкой настройки.
         section("reanimated.section.main");
         this.body.addAll(
+            pvp(c),
             preset("reanimated.opt.preset", c.uiPreset, v -> c.uiPreset = v),
             ticks("reanimated.opt.speed_ticks", 1, 40, c.animationSpeedTicks, v -> c.animationSpeedTicks = v),
             scope("reanimated.opt.animate_scope", c.animateModdedScreens, v -> c.animateModdedScreens = v),
@@ -80,6 +94,8 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
             toggle("reanimated.opt.bg_fade", c.bgFadeEnabled, v -> c.bgFadeEnabled = v)
         );
 
+        // Один переключатель на слой: включить или выключить целиком, без цифр.
+        // Именно за этим сюда заходят чаще всего — «убрать анимацию подсказок».
         section("reanimated.section.enable");
         this.body.addAll(
             toggle("reanimated.opt.screen_enabled", c.screenOpenEnabled, v -> c.screenOpenEnabled = v),
@@ -93,10 +109,17 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
             toggle("reanimated.opt.hover_enabled", c.hoverEnabled, v -> c.hoverEnabled = v),
             toggle("reanimated.opt.press_enabled", c.pressEnabled, v -> c.pressEnabled = v),
             toggle("reanimated.opt.slot_enabled", c.slotHighlightEnabled, v -> c.slotHighlightEnabled = v),
+            toggle("reanimated.opt.widgets_enabled", c.widgetsEnabled, v -> c.widgetsEnabled = v),
+            toggle("reanimated.opt.hotbar_enabled", c.hotbarEnabled, v -> c.hotbarEnabled = v),
+            toggle("reanimated.opt.hotbar_name_enabled", c.hotbarItemNameEnabled, v -> c.hotbarItemNameEnabled = v),
             toggle("reanimated.opt.logo_enabled", c.logoEnabled, v -> c.logoEnabled = v),
-            toggle("reanimated.opt.tabs_enabled", c.tabsEnabled, v -> c.tabsEnabled = v)
+            toggle("reanimated.opt.tabs_enabled", c.tabsEnabled, v -> c.tabsEnabled = v),
+            toggle("reanimated.opt.tab_switch_enabled", c.tabSwitchEnabled, v -> c.tabSwitchEnabled = v)
         );
 
+        // Инструменты — секцией самого списка, а не кнопками по углам экрана: на GUI
+        // scale 3–4 ширина падает ниже 558 px, и угловые кнопки наезжали бы на строки
+        // настроек. В списке они прокручиваются вместе со всем остальным.
         section("reanimated.section.tools");
         this.body.addWidgetEntry(
             ButtonWidget.builder(STUDIO, b -> this.client.setScreen(new AnimationStudioScreen(this)))
@@ -119,7 +142,7 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
         section("reanimated.section.details");
         this.body.addAll(expand("reanimated.opt.advanced", c.advancedSettings, v -> c.advancedSettings = v));
         if (!c.advancedSettings) {
-            return;
+            return; // всё ниже — тонкая настройка, её попросили не показывать
         }
 
         section("reanimated.section.menu");
@@ -160,6 +183,8 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
             slider("reanimated.opt.tooltip_scale", 0.5, 1.0, c.tooltipScale, "", v -> c.tooltipScale = v.floatValue()),
             slider("reanimated.opt.tooltip_offset", -20, 20, c.tooltipOffsetY, " px", v -> c.tooltipOffsetY = v.floatValue()),
             easing("reanimated.opt.tooltip_easing", c.tooltipEasing, v -> c.tooltipEasing = v),
+            // Дольше ванильных 600 мс уведомление растянуть нельзя: мод переиспользует
+            // ванильный таймер, а не заводит свой.
             intSlider("reanimated.opt.toast_duration", 100, 600, c.toastDurationMs, " ms", v -> c.toastDurationMs = v),
             easing("reanimated.opt.toast_easing", c.toastEasing, v -> c.toastEasing = v)
         );
@@ -170,14 +195,22 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
             slider("reanimated.opt.hover_speed", 2, 30, c.hoverSpeed, "", v -> c.hoverSpeed = v.floatValue()),
             slider("reanimated.opt.press_scale", 0.0, 0.3, c.pressScale, "", v -> c.pressScale = v.floatValue()),
             slider("reanimated.opt.press_duration", 0.05, 0.6, c.pressDuration, " s", v -> c.pressDuration = v.floatValue()),
-            slider("reanimated.opt.slot_speed", 4, 40, c.slotHighlightSpeed, "", v -> c.slotHighlightSpeed = v.floatValue())
+            slider("reanimated.opt.slot_speed", 4, 40, c.slotHighlightSpeed, "", v -> c.slotHighlightSpeed = v.floatValue()),
+            slider("reanimated.opt.widget_speed", 4, 40, c.widgetSpeed, "", v -> c.widgetSpeed = v.floatValue())
+        );
+
+        section("reanimated.section.hud");
+        this.body.addAll(
+            slider("reanimated.opt.hotbar_speed", 4, 40, c.hotbarSpeed, "", v -> c.hotbarSpeed = v.floatValue())
         );
 
         section("reanimated.section.logo");
         this.body.addAll(
             logoStyle("reanimated.opt.logo_style", c.logoStyle, v -> c.logoStyle = v),
+            // Стиль GROW — родная анимация "вырастания"
             slider("reanimated.opt.logo_duration", 0.1, 2.0, c.logoDuration, " s", v -> c.logoDuration = v.floatValue()),
             easing("reanimated.opt.logo_easing", c.logoEasing, v -> c.logoEasing = v),
+            // Стиль LETTERS — побуквенный каскад
             intSlider("reanimated.opt.logo_letter_duration", 50, 1200, c.profileLogo.durationMs, " ms", v -> c.profileLogo.durationMs = v),
             intSlider("reanimated.opt.logo_letter_delay", 0, 300, c.profileLogo.cascadeDelayMs, " ms", v -> c.profileLogo.cascadeDelayMs = v),
             slider("reanimated.opt.logo_letter_offset", -60, 60, c.profileLogo.offsetY, " px", v -> c.profileLogo.offsetY = v.floatValue()),
@@ -190,10 +223,18 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
             intSlider("reanimated.opt.tabs_duration", 50, 1200, c.profileTabs.durationMs, " ms", v -> c.profileTabs.durationMs = v),
             intSlider("reanimated.opt.tabs_delay", 0, 300, c.profileTabs.cascadeDelayMs, " ms", v -> c.profileTabs.cascadeDelayMs = v),
             slider("reanimated.opt.tabs_offset", -120, 120, c.profileTabs.offsetY, " px", v -> c.profileTabs.offsetY = v.floatValue()),
-            easing("reanimated.opt.tabs_easing", c.profileTabs.easing, v -> c.profileTabs.easing = v)
+            easing("reanimated.opt.tabs_easing", c.profileTabs.easing, v -> c.profileTabs.easing = v),
+            intSlider("reanimated.opt.tab_switch_duration", 50, 600, c.tabSwitchDurationMs, " ms", v -> c.tabSwitchDurationMs = v),
+            slider("reanimated.opt.tab_switch_distance", 0, 80, c.tabSwitchDistance, " px", v -> c.tabSwitchDistance = v.floatValue()),
+            easing("reanimated.opt.tab_switch_easing", c.tabSwitchEasing, v -> c.tabSwitchEasing = v)
         );
     }
 
+    /**
+     * Переключатель, от которого зависит СОСТАВ списка. Пересобрать его прямо в
+     * обработчике нельзя: клик в этот момент ещё идёт по тем самым виджетам, которые
+     * мы заменим, — поэтому список перестраивается в начале следующего кадра.
+     */
     private SimpleOption<Boolean> expand(String key, boolean current, Consumer<Boolean> setter) {
         return SimpleOption.ofBoolean(key, current, v -> {
             setter.accept(v);
@@ -202,6 +243,11 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
         });
     }
 
+    /**
+     * Секция расширений: анимации и кнопки, добавленные другими модами. Пока никто
+     * ничего не добавил, секции нет вовсе — пустой заголовок в списке настроек только
+     * сбивал бы с толку.
+     */
     private void reanimated$extensions() {
         java.util.List<CustomPreset> presets = ReAnimatedApi.presets();
         java.util.List<SettingsEntry> entries = ReAnimatedApi.settingsEntries();
@@ -221,12 +267,20 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
     private ButtonWidget extensionButton(SettingsEntry entry) {
         return ButtonWidget.builder(Text.literal(entry.label()), b -> {
             ReAnimatedApi.openEntry(entry, this);
+            // Кнопка расширения может не открывать экран, а что-то переключать — тогда
+            // её надпись должна обновиться сразу. Пересобираем список, если расширение
+            // не увело нас на свой экран.
             if (this.client != null && this.client.currentScreen == this) {
                 this.clearAndInit();
             }
         }).dimensions(0, 0, 150, 20).build();
     }
 
+    /**
+     * Выбор анимации из расширения. Значение 0 — «не выбрана»: тогда работает обычный
+     * пресет. Список берётся у API в момент открытия экрана, поэтому мод, добавивший
+     * анимацию позже, появится здесь после переоткрытия настроек.
+     */
     private SimpleOption<Integer> extensionPreset(java.util.List<CustomPreset> presets) {
         ReAnimatedConfig c = ReAnimatedConfig.get();
         int current = 0;
@@ -249,6 +303,7 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
             current,
             value -> {
                 if (value <= 0 || value > presets.size()) {
+                    // Снимаем выбор, но общий пресет трогаем, только если он и был чужим.
                     if (c.uiPreset == UiPreset.CUSTOM) c.uiPreset = UiPreset.DEFAULT;
                     c.customPresetId = "";
                 } else {
@@ -260,10 +315,21 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
         );
     }
 
+    /** Строка-заголовок секции в списке настроек (центрированный цветной текст, без взаимодействия). */
     private void section(String key) {
         net.minecraft.client.gui.widget.TextWidget t = new net.minecraft.client.gui.widget.TextWidget(
             Text.translatable(key).formatted(net.minecraft.util.Formatting.GOLD), this.textRenderer);
         this.body.addWidgetEntry(t, null);
+    }
+
+    /** PvP-режим — с подсказкой: по одному названию не понять, что именно он меняет. */
+    private SimpleOption<Boolean> pvp(ReAnimatedConfig c) {
+        return SimpleOption.ofBoolean("reanimated.opt.pvp_mode",
+            SimpleOption.constantTooltip(Text.translatable("reanimated.tip.pvp_mode")),
+            c.pvpMode, v -> {
+                c.pvpMode = v;
+                ReAnimatedConfig.get().save();
+            });
     }
 
     private SimpleOption<Boolean> toggle(String key, boolean current, Consumer<Boolean> setter) {
@@ -338,6 +404,7 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
         );
     }
 
+    /** Слайдер целочисленного значения с произвольной единицей. */
     private SimpleOption<Integer> intSlider(String key, int min, int max, int current, String unit, Consumer<Integer> setter) {
         return new SimpleOption<>(
             key,
@@ -353,9 +420,11 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
     }
 
     private SimpleOption<UiPreset> preset(String key, UiPreset current, Consumer<UiPreset> setter) {
+        // Общему пресету нечего наследовать — INHERIT в списке не показываем.
         return presetOption(key, UiPreset.MAIN, current, setter);
     }
 
+    /** Пресет меню паузы: то же самое плюс вариант «как общий» (INHERIT). */
     private SimpleOption<UiPreset> pausePreset(String key, UiPreset current, Consumer<UiPreset> setter) {
         return presetOption(key, UiPreset.values(), current, setter);
     }
@@ -376,6 +445,7 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
         );
     }
 
+    /** Слайдер целочисленной скорости в тиках. */
     private SimpleOption<Integer> ticks(String key, int min, int max, int current, Consumer<Integer> setter) {
         return new SimpleOption<>(
             key,
@@ -390,6 +460,7 @@ public class ReAnimatedConfigScreen extends GameOptionsScreen {
         );
     }
 
+    /** Переключатель "Весь интерфейс / Только ванильные". true = анимировать и моды. */
     private SimpleOption<Boolean> scope(String key, boolean current, Consumer<Boolean> setter) {
         return new SimpleOption<>(
             key,

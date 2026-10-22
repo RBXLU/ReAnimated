@@ -2,6 +2,11 @@ import com.pycodder.reanimated.api.*;
 
 import java.util.List;
 
+/**
+ * Прогон API ReAnimated без игры. Пакет com.pycodder.reanimated.api намеренно не
+ * тянет за собой ни классов Minecraft, ни классов загрузчика — поэтому его можно
+ * взять прямо из jar'а мода и погонять обычной джавой.
+ */
 public class ApiSmokeTest {
 
     private static int failed = 0;
@@ -11,6 +16,7 @@ public class ApiSmokeTest {
         if (!ok) failed++;
     }
 
+    /** Анимация «прыжок» — та же математика, что в моде-примере. */
     static final class Bounce implements CustomPreset {
         public String id() { return "reanimated_bounce:jump"; }
         public String displayName() { return "Jump"; }
@@ -49,7 +55,7 @@ public class ApiSmokeTest {
         boolean hops = false;
         for (int i = 1; i <= 100; i++) {
             float y = ReAnimatedApi.motionOf(bounce, i / 100f).offsetY;
-            if (y < prev - 0.01f) hops = true;
+            if (y < prev - 0.01f) hops = true; // экран снова пошёл вверх — это подскок
             prev = y;
         }
         check("экран подпрыгивает, а не просто съезжает", hops);

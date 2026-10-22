@@ -11,6 +11,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Properties;
 
+/**
+ * Состояние примера: включён ли «прыжок». Хранится отдельным файлом — расширение
+ * не лезет в конфиг самого ReAnimated и ничего о его формате не знает.
+ */
 public final class BounceConfig {
     private BounceConfig() {}
 

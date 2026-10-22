@@ -1,5 +1,16 @@
 package com.pycodder.reanimated.anim;
 
+/**
+ * Профиль анимации появления интерфейса — то, что настраивается в
+ * {@code AnimProfileEditorScreen} и применяется к реальным экранам.
+ *
+ * Пока {@link #enabled} = false, работает старая схема (пресет + слайдеры).
+ * Когда профиль включён, он полностью задаёт анимацию открытия: смещение,
+ * начальный масштаб, прозрачность и каскад по элементам.
+ *
+ * Вся математика собрана здесь, чтобы превью в редакторе и настоящие экраны
+ * считались одним и тем же кодом и гарантированно выглядели одинаково.
+ */
 public class AnimProfile {
 
     public boolean enabled = false;
@@ -14,8 +25,10 @@ public class AnimProfile {
     public PivotPoint pivot = PivotPoint.CENTER;
     public EasingType easing = EasingType.OUT_CUBIC;
 
+    /** Минимальный масштаб: нулевой схлопнул бы матрицу и сломал обратную трансформацию фона. */
     private static final float MIN_SCALE = 0.01f;
 
+    /** Номер шага каскада для виджета с рангом {@code rank} (ранг — сверху вниз). */
     public int slotFor(int rank, int count) {
         if (rank < 0 || count <= 1 || cascadeOrder == CascadeOrder.SIMULTANEOUS) return 0;
         return cascadeOrder == CascadeOrder.BOTTOM_TO_TOP ? (count - 1 - rank) : rank;
@@ -26,10 +39,12 @@ public class AnimProfile {
         return Math.max(0, cascadeDelayMs) * slot;
     }
 
+    /** Полная длительность анимации экрана из {@code count} элементов (мс). */
     public int totalMs(int count) {
         return Math.max(1, durationMs) + delayFor(Math.max(0, count - 1));
     }
 
+    /** Сглаженный прогресс 0..1 (OUT_BACK может дать >1 — это отскок) для шага каскада. */
     public float progress(float elapsedMs, int slot) {
         float t = (elapsedMs - delayFor(slot)) / Math.max(1, durationMs);
         return easing.apply(Easing.clamp01(t));
@@ -55,11 +70,13 @@ public class AnimProfile {
         return Easing.clamp01(Easing.lerp(initialAlpha, 1f, eased));
     }
 
+    /** true, если при таком прогрессе трансформация ничего не меняет (можно не трогать матрицу). */
     public boolean identityAt(float eased) {
         return offsetXAt(eased) == 0f && offsetYAt(eased) == 0f
             && scaleXAt(eased) == 1f && scaleYAt(eased) == 1f;
     }
 
+    /** Подставляет значения по умолчанию вместо null'ов после чтения старого/битого конфига. */
     public void sanitize() {
         if (cascadeOrder == null) cascadeOrder = CascadeOrder.BOTTOM_TO_TOP;
         if (pivot == null) pivot = PivotPoint.CENTER;

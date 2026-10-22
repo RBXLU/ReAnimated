@@ -30,8 +30,24 @@ import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
+/**
+ * Настройки мода прямо в экране Sodium — своей страницей в его списке слева и его же
+ * элементами управления, а не отдельной кнопкой поверх чужого экрана.
+ *
+ * Держится на публичном config API Sodium (точка входа {@code sodium:config_api_user}),
+ * который появился в **Sodium 0.8**. На более старых версиях Sodium этот класс просто
+ * никогда не загружается: Fabric создаёт объект точки входа только когда её кто-то
+ * запрашивает, а старый Sodium про этот ключ не знает. Поэтому и без Sodium, и со
+ * старым Sodium мод работает как раньше — там остаётся кнопка поверх экрана графики
+ * (см. {@code ReAnimatedClient}), а здесь она отключается флагом {@link SodiumPageState#registered}.
+ *
+ * У Sodium нет дробных ползунков, поэтому доли хранятся целыми: масштаб — в процентах,
+ * длительности — в миллисекундах. Конвертация живёт в биндингах, в конфиге всё
+ * по-прежнему во float'ах.
+ */
 public class SodiumIntegration implements ConfigEntryPoint {
 
+    /** Значения по умолчанию для кнопки сброса у Sodium. */
     private static final ReAnimatedConfig DEFAULTS = new ReAnimatedConfig();
 
     @Override
@@ -48,6 +64,7 @@ public class SodiumIntegration implements ConfigEntryPoint {
         mod.addPage(transitions(builder, c));
         mod.addPage(containers(builder, c));
         mod.addPage(cursor(builder, c));
+        mod.addPage(hud(builder, c));
         mod.addPage(popups(builder, c));
         mod.addPage(logo(builder, c));
         mod.addPage(tabs(builder, c));
@@ -55,8 +72,12 @@ public class SodiumIntegration implements ConfigEntryPoint {
         SodiumPageState.registered = true;
     }
 
+    // ------------------------------------------------------------------ страницы
+
     private static OptionPageBuilder general(ConfigBuilder b, ReAnimatedConfig c) {
         OptionGroupBuilder main = group(b, "reanimated.tab.general")
+            .addOption(boolOpt(b, "pvp_mode", "reanimated.opt.pvp_mode",
+                DEFAULTS.pvpMode, () -> c.pvpMode, v -> c.pvpMode = v))
             .addOption(enumOpt(b, "ui_preset", "reanimated.opt.preset", UiPreset.class,
                 enumSet(UiPreset.MAIN), p -> p.display, DEFAULTS.uiPreset,
                 () -> c.uiPreset, v -> c.uiPreset = v))
@@ -71,6 +92,8 @@ public class SodiumIntegration implements ConfigEntryPoint {
             .addOption(boolOpt(b, "lists_enabled", "reanimated.opt.lists_enabled",
                 DEFAULTS.listsEnabled, () -> c.listsEnabled, v -> c.listsEnabled = v));
 
+        // Экраны, которые ползунками не выразить: студия, редактор профиля и полный
+        // экран настроек мода (там же обмен конфигом через буфер обмена).
         OptionGroupBuilder tools = group(b, "reanimated.group.tools")
             .addOption(screenOpt(b, "studio", "reanimated.opt.studio",
                 prev -> MinecraftClient.getInstance().setScreen(new AnimationStudioScreen(prev))))
@@ -99,6 +122,7 @@ public class SodiumIntegration implements ConfigEntryPoint {
         return page(b, "reanimated.tab.pause").addOptionGroup(group(b, "reanimated.tab.pause")
             .addOption(boolOpt(b, "pause_enabled", "reanimated.opt.pause_enabled",
                 DEFAULTS.pauseEnabled, () -> c.pauseEnabled, v -> c.pauseEnabled = v))
+            // У меню паузы есть вариант «как общий» (INHERIT) — здесь показываем все значения.
             .addOption(enumOpt(b, "pause_preset", "reanimated.opt.pause_preset", UiPreset.class,
                 EnumSet.allOf(UiPreset.class), p -> p.display, DEFAULTS.pausePreset,
                 () -> c.pausePreset, v -> c.pausePreset = v))
@@ -181,6 +205,7 @@ public class SodiumIntegration implements ConfigEntryPoint {
         return page(b, "reanimated.tab.cursor").addOptionGroup(group(b, "reanimated.tab.cursor")
             .addOption(boolOpt(b, "hover_enabled", "reanimated.opt.hover_enabled",
                 DEFAULTS.hoverEnabled, () -> c.hoverEnabled, v -> c.hoverEnabled = v))
+            // Доля 0..0.3 -> проценты: у Sodium дробных ползунков нет.
             .addOption(intOpt(b, "hover_scale", "reanimated.opt.hover_scale", 0, 30, 1, PERCENT,
                 percent(DEFAULTS.hoverScale), () -> percent(c.hoverScale), v -> c.hoverScale = v / 100f))
             .addOption(intOpt(b, "hover_speed", "reanimated.opt.hover_speed", 2, 30, 1, PLAIN,
@@ -195,7 +220,23 @@ public class SodiumIntegration implements ConfigEntryPoint {
                 DEFAULTS.slotHighlightEnabled, () -> c.slotHighlightEnabled, v -> c.slotHighlightEnabled = v))
             .addOption(intOpt(b, "slot_speed", "reanimated.opt.slot_speed", 4, 40, 1, PLAIN,
                 Math.round(DEFAULTS.slotHighlightSpeed), () -> Math.round(c.slotHighlightSpeed),
-                v -> c.slotHighlightSpeed = v)));
+                v -> c.slotHighlightSpeed = v))
+            .addOption(boolOpt(b, "widgets_enabled", "reanimated.opt.widgets_enabled",
+                DEFAULTS.widgetsEnabled, () -> c.widgetsEnabled, v -> c.widgetsEnabled = v))
+            .addOption(intOpt(b, "widget_speed", "reanimated.opt.widget_speed", 4, 40, 1, PLAIN,
+                Math.round(DEFAULTS.widgetSpeed), () -> Math.round(c.widgetSpeed),
+                v -> c.widgetSpeed = v)));
+    }
+
+    private static OptionPageBuilder hud(ConfigBuilder b, ReAnimatedConfig c) {
+        return page(b, "reanimated.tab.hud").addOptionGroup(group(b, "reanimated.tab.hud")
+            .addOption(boolOpt(b, "hotbar_enabled", "reanimated.opt.hotbar_enabled",
+                DEFAULTS.hotbarEnabled, () -> c.hotbarEnabled, v -> c.hotbarEnabled = v))
+            .addOption(intOpt(b, "hotbar_speed", "reanimated.opt.hotbar_speed", 4, 40, 1, PLAIN,
+                Math.round(DEFAULTS.hotbarSpeed), () -> Math.round(c.hotbarSpeed),
+                v -> c.hotbarSpeed = v))
+            .addOption(boolOpt(b, "hotbar_name_enabled", "reanimated.opt.hotbar_name_enabled",
+                DEFAULTS.hotbarItemNameEnabled, () -> c.hotbarItemNameEnabled, v -> c.hotbarItemNameEnabled = v)));
     }
 
     private static OptionPageBuilder logo(ConfigBuilder b, ReAnimatedConfig c) {
@@ -241,8 +282,19 @@ public class SodiumIntegration implements ConfigEntryPoint {
                 Math.round(DEFAULTS.profileTabs.offsetY), () -> Math.round(c.profileTabs.offsetY),
                 v -> c.profileTabs.offsetY = v))
             .addOption(easingOpt(b, "tabs_easing", "reanimated.opt.tabs_easing",
-                DEFAULTS.profileTabs.easing, () -> c.profileTabs.easing, v -> c.profileTabs.easing = v)));
+                DEFAULTS.profileTabs.easing, () -> c.profileTabs.easing, v -> c.profileTabs.easing = v))
+            .addOption(boolOpt(b, "tab_switch_enabled", "reanimated.opt.tab_switch_enabled",
+                DEFAULTS.tabSwitchEnabled, () -> c.tabSwitchEnabled, v -> c.tabSwitchEnabled = v))
+            .addOption(intOpt(b, "tab_switch_duration", "reanimated.opt.tab_switch_duration", 50, 600, 10, MILLIS,
+                DEFAULTS.tabSwitchDurationMs, () -> c.tabSwitchDurationMs, v -> c.tabSwitchDurationMs = v))
+            .addOption(intOpt(b, "tab_switch_distance", "reanimated.opt.tab_switch_distance", 0, 80, 1, PIXELS,
+                Math.round(DEFAULTS.tabSwitchDistance), () -> Math.round(c.tabSwitchDistance),
+                v -> c.tabSwitchDistance = v))
+            .addOption(easingOpt(b, "tab_switch_easing", "reanimated.opt.tab_switch_easing",
+                DEFAULTS.tabSwitchEasing, () -> c.tabSwitchEasing, v -> c.tabSwitchEasing = v)));
     }
+
+    // ------------------------------------------------------------------ строительные блоки
 
     private static OptionPageBuilder page(ConfigBuilder b, String key) {
         return b.createOptionPage().setName(Text.translatable(key));
@@ -295,6 +347,7 @@ public class SodiumIntegration implements ConfigEntryPoint {
             e -> e.display, def, get, set);
     }
 
+    /** Кнопка, открывающая наш экран: Sodium передаёт свой экран — он и станет родителем. */
     private static OptionBuilder screenOpt(ConfigBuilder b, String id, String key, Consumer<Screen> open) {
         return b.createExternalButtonOption(id(id))
             .setName(Text.translatable(key))
@@ -302,6 +355,7 @@ public class SodiumIntegration implements ConfigEntryPoint {
             .setScreenConsumer(open::accept);
     }
 
+    /** Описание опции для правой панели Sodium: ключ выводится из её идентификатора. */
     private static Text tip(String id) {
         return Text.translatable("reanimated.tip." + id);
     }
@@ -310,6 +364,7 @@ public class SodiumIntegration implements ConfigEntryPoint {
         return Identifier.of("reanimated", path);
     }
 
+    /** Версия для шапки страницы; Sodium требует непустую строку. */
     private static String modVersion() {
         return net.fabricmc.loader.api.FabricLoader.getInstance()
             .getModContainer("reanimated")
@@ -321,6 +376,7 @@ public class SodiumIntegration implements ConfigEntryPoint {
         ReAnimatedConfig.get().save();
     }
 
+    /** Массив значений -> EnumSet: у Sodium набор значений, а порядок берётся по ordinal. */
     private static <E extends Enum<E>> Set<E> enumSet(E[] values) {
         Set<E> set = EnumSet.noneOf(values[0].getDeclaringClass());
         java.util.Collections.addAll(set, values);

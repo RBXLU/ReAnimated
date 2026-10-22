@@ -12,6 +12,8 @@ import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.network.chat.Component;
 import org.joml.Matrix3x2fStack;
 
 import java.util.ArrayList;
@@ -24,6 +26,36 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+/**
+ * Анимация появления любого экрана для Minecraft 26.x (рендеринг через
+ * render-state extraction) — слой ЭКРАНА (пресет):
+ *  - extractRenderStateWithTooltipAndSubtitles — внешняя точка (= renderWithTooltip),
+ *    оборачиваем её общим трансформом (сдвиг/масштаб по пресету) → весь экран
+ *    (текст + кнопки + панель) появляется вместе;
+ *  - extractBackground — фон/блюр, возвращаем встречным трансформом, чтобы он стоял.
+ *
+ * Покнопочный слой (профиль/Студия) кладётся ПОВЕРХ в ClickableWidgetMixin — так
+ * пресет и профиль складываются, а не исключают друг друга.
+ *
+ * Время открытия и ранги каскада выставляются лениво при первой отрисовке;
+ * ранги переназначаются при смене размера экрана (виджеты пересоздаются).
+ */
+/*
+ * priority = 1500 (по умолчанию 1000) — сознательно ВЫШЕ обычного.
+ *
+ * Оборачиваем отрисовку экрана: push на HEAD, pop на RETURN. Порядок инжекторов
+ * разных модов в одной точке задаётся порядком применения миксинов, а он идёт по
+ * возрастанию приоритета, и колбэк миксина, применённого позже, оказывается ближе к
+ * телу метода. Поэтому с высоким приоритетом наш pop на RETURN выполняется ПОСЛЕДНИМ
+ * — и всё, что другие моды дорисовывают к экрану из своих хуков на RETURN, попадает
+ * внутрь трансформации и едет вместе с экраном. (На HEAD, наоборот, наш колбэк идёт
+ * после чужих — это проверено по байткоду; где нужно опередить чужой HEAD, стоит
+ * отдельный миксин с низким приоритетом, см. ScreenBackgroundMixin.)
+ *
+ * Без этого оверлеи вроде списка предметов EMI/JEI/REI (их рисуют из хука на RETURN
+ * того же метода) оставались бы снаружи: наш pop успевал бы раньше, и панель
+ * стояла бы на месте, пока экран выезжает.
+ */
 @Mixin(value = Screen.class, priority = 1500)
 public abstract class ScreenMixin {
 
@@ -37,13 +69,26 @@ public abstract class ScreenMixin {
     @Unique private int reanimated$lastH = -1;
 
     @Unique private int reanimated$pauseFlag = -1;
+    /** С какой стороны экран пришёл при переходе. 0 — открыт не переходом. */
     @Unique private int reanimated$enterDir = 0;
+
+    /**
+     * Подпись экрана для списка настроек. У инвентаря заголовок — «Создание»
+     * (это заголовок сетки крафта), поэтому его подписываем сами.
+     */
+    @Unique
+    private String reanimated$title() {
+        if ((Object) this instanceof InventoryScreen) return Component.translatable("container.inventory").getString();
+        Component title = ((Screen) (Object) this).getTitle();
+        return title == null ? null : title.getString();
+    }
 
     @Unique
     private boolean reanimated$isContainer() {
         return ((Object) this) instanceof AbstractContainerScreen;
     }
 
+    /** Меню паузы у экрана не меняется — определяем один раз, а не каждый кадр. */
     @Unique
     private boolean reanimated$isPause() {
         if (reanimated$pauseFlag < 0) {
@@ -52,15 +97,19 @@ public abstract class ScreenMixin {
         return reanimated$pauseFlag == 1;
     }
 
+    /** Раздаёт виджетам ранг сверху вниз — из него виджет считает свой шаг каскада. */
     @Unique
     private void reanimated$assignCascade() {
         Anim.cascadeCount = 1;
+        // Без ранга виджет не каскадируется вовсе — так экраны, которые мод не
+        // анимирует (чат, экраны модов в режиме "только ванильные"), остаются нетронутыми.
         if (!Anim.shouldAnimate(this)) {
             return;
         }
         Screen self = (Screen) (Object) this;
         List<AbstractWidget> widgets = new ArrayList<>();
         for (GuiEventListener e : self.children()) {
+            // Фреймы-списки мод не анимирует вовсе — они и шага в каскаде не занимают.
             if (e instanceof AbstractWidget w && w.visible && !(e instanceof AbstractContainerWidget)) {
                 widgets.add(w);
             }
@@ -75,6 +124,9 @@ public abstract class ScreenMixin {
 
     @Inject(method = "extractRenderStateWithTooltipAndSubtitles", at = @At("HEAD"), cancellable = true)
     private void reanimated$wrapHead(GuiGraphicsExtractor extractor, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        // Закрытие этого экрана доиграло в прошлом кадре — выполняем его сейчас, до того
+        // как экран что-либо нарисует, и сам экран в этот кадр уже не рисуем
+        // (см. Anim.closeReadyScreen). Ничего в стек матриц мы ещё не положили.
         if (Anim.closeReadyScreen == this) {
             reanimated$closeNow(null);
             ci.cancel();
@@ -82,12 +134,23 @@ public abstract class ScreenMixin {
         }
         Anim.frameGraphics = extractor;
         Anim.beginFrame();
+        // Экран показали снова — он появляется заново, как только что открытый.
+        if (Anim.restartScreen == this) {
+            Anim.restartScreen = null;
+            reanimated$openTime = 0L;
+            reanimated$lastW = -1;
+        }
         if (reanimated$openTime == 0L) {
             reanimated$openTime = System.currentTimeMillis();
+            // Направление перехода выставил уходивший экран — забираем его один раз,
+            // чтобы следующий экран его уже не подхватил.
             reanimated$enterDir = reanimated$isContainer() ? 0 : Anim.takeEnterDir();
-            ScreenRules.remember(this);
+            // Экран попадает в список редактора настроек только после того, как игрок
+            // его открыл: перечислить все экраны сборки заранее неоткуда.
+            ScreenRules.remember(this, reanimated$title());
             Anim.onScreenOpened(this);
         }
+        // Первый кадр или ресайз — виджеты пересозданы, раздаём ранги заново.
         if (this.width != reanimated$lastW || this.height != reanimated$lastH) {
             reanimated$lastW = this.width;
             reanimated$lastH = this.height;
@@ -100,6 +163,8 @@ public abstract class ScreenMixin {
         Anim.currentScreen = this;
         Anim.currentIsContainer = reanimated$isContainer();
         boolean container = reanimated$isContainer();
+        // Матрица кадра до нашей трансформации: по ней фон и блюр вернутся
+        // на место, ничего не обращая (см. UiTransform.pushBase).
         UiTransform.saveBase(extractor.pose());
         reanimated$fwdPushed = Anim.transformActive(container) && Anim.shouldAnimate(this);
         if (reanimated$fwdPushed) {
@@ -118,6 +183,14 @@ public abstract class ScreenMixin {
         reanimated$maybeFinishClose();
     }
 
+    /**
+     * По завершении обратной анимации выполняет отложенную смену экрана.
+     *
+     * Переход на другой экран меняет его сразу, на выходе из отрисовки: следующий экран
+     * должен появиться уже в следующем кадре, иначе между ними был бы кадр без экрана.
+     * А закрытие в мир откладывается до начала следующего кадра (Anim.closeReadyScreen):
+     * посреди кадра нельзя, иначе всё, что рисуется после экрана, видит «экрана нет».
+     */
     @Unique
     private void reanimated$maybeFinishClose() {
         if (!Anim.isClosing()) return;
@@ -129,6 +202,7 @@ public abstract class ScreenMixin {
         reanimated$closeNow(Anim.pendingScreen);
     }
 
+    /** Настоящая смена экрана: на {@code next} или, если он null, — в мир. */
     @Unique
     private void reanimated$closeNow(Object next) {
         Anim.finishClose();
@@ -136,8 +210,8 @@ public abstract class ScreenMixin {
         net.minecraft.client.Minecraft.getInstance().gui.setScreen(next instanceof Screen s ? s : null);
         Anim.bypassClose = false;
         if (next == null) {
-            ScreenNav.clear();
-            Anim.clearEnterDir();
+            ScreenNav.clear();      // вернулись в игру — история переходов не нужна
+            Anim.clearEnterDir();   // и направление входа тоже: перехода не было
         }
     }
 
@@ -157,18 +231,30 @@ public abstract class ScreenMixin {
         }
     }
 
+    /** Цвета ванильного затемнения: градиент сверху вниз, оба — чёрный с разной прозрачностью. */
     @Unique private static final int REANIMATED$DIM_TOP = 0xC0101010;
     @Unique private static final int REANIMATED$DIM_BOTTOM = 0xD0101010;
 
+    /**
+     * Плавное появление затемнения за экраном. Ваниль включает его мгновенно — панель
+     * красиво выезжает на фоне, который «щёлкнул». Здесь тот же градиент выдаётся с
+     * прозрачностью по кривой открытия, а на закрытии гаснет обратно.
+     *
+     * Пока анимация не идёт, ванильный метод отрабатывает как обычно — мод не трогает
+     * ни один кадр статичного экрана и не мешает модам, меняющим затемнение.
+     */
     @Inject(method = "extractTransparentBackground", at = @At("HEAD"), cancellable = true)
     private void reanimated$dimFade(GuiGraphicsExtractor extractor, CallbackInfo ci) {
+        // С Blur+ затемнением за экраном распоряжается он: у него своё появление и своё
+        // угасание и свой градиент, а наша отмена этого метода подменила бы его градиент
+        // ванильным на всё время анимации. На закрытии фон ему отдаёт ScreenBackgroundMixin.
         if (BlurPlusCompat.present()) return;
         if (!Anim.shouldAnimate(this)) return;
         float k = Anim.backgroundFade(reanimated$isContainer());
         if (k >= 1f) return;
 
         ci.cancel();
-        if (k <= 0.004f) return;
+        if (k <= 0.004f) return; // ещё неотличимо от прозрачного — не рисуем вовсе
         extractor.fillGradient(0, 0, this.width, this.height,
             reanimated$dim(REANIMATED$DIM_TOP, k), reanimated$dim(REANIMATED$DIM_BOTTOM, k));
     }

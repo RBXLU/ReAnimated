@@ -16,6 +16,17 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+/**
+ * Анимация логотипа "Minecraft" на главном экране (Minecraft 26.x — render-state extraction).
+ *
+ * Два стиля (config.logoStyle):
+ *  - GROW    — родная анимация мода: логотип целиком "вырастает" с отскоком;
+ *  - LETTERS — побуквенный каскад: девять букв влетают/проявляются по очереди
+ *              (идея и текстуры букв — из EaseGUI, LGPLv3). В этом режиме ванильная
+ *              отрисовка логотипа отменяется, буквы и edition-текст рисуем сами.
+ *
+ * Прозрачность передаётся ARGB-цветом в blit.
+ */
 @Mixin(LogoRenderer.class)
 public class LogoDrawerMixin {
 
@@ -23,6 +34,7 @@ public class LogoDrawerMixin {
 
     @Unique private static Identifier[] reanimated$letters;
 
+    /** Лениво собирает Identifier'ы букв (без статического инициализатора — безопаснее для миксина). */
     @Unique
     private static Identifier[] reanimated$letters() {
         Identifier[] a = reanimated$letters;
@@ -36,6 +48,7 @@ public class LogoDrawerMixin {
         return a;
     }
 
+    /** Белый цвет с заданной прозрачностью в формате ARGB. */
     @Unique
     private static int reanimated$argb(float alpha) {
         int a = Math.round(Math.max(0f, Math.min(1f, alpha)) * 255f);
@@ -56,7 +69,8 @@ public class LogoDrawerMixin {
             return;
         }
 
-        float elapsed = Anim.elapsed(System.currentTimeMillis());
+        // --- Стиль GROW ---
+        float elapsed = Anim.logoElapsed(System.currentTimeMillis(), alpha);
         if (elapsed == Float.MAX_VALUE) {
             return;
         }
@@ -82,7 +96,7 @@ public class LogoDrawerMixin {
     @Unique
     private void reanimated$drawLetters(GuiGraphicsExtractor extractor, int screenWidth, float alpha, ReAnimatedConfig c) {
         AnimProfile p = c.profileLogo;
-        float e = Anim.elapsed(System.currentTimeMillis());
+        float e = Anim.logoElapsed(System.currentTimeMillis(), alpha);
         float elapsedMs = (e == Float.MAX_VALUE) ? Float.MAX_VALUE : e * 1000f;
 
         int boxX = screenWidth / 2 - LogoLetters.LOGO_WIDTH / 2;
@@ -111,6 +125,7 @@ public class LogoDrawerMixin {
                 m.popMatrix();
             }
         }
+        // edition-текст ("Java Edition")
         extractor.blit(RenderPipelines.GUI_TEXTURED, LogoRenderer.MINECRAFT_EDITION,
                 screenWidth / 2 - 64, boxY + LogoLetters.LOGO_HEIGHT - 7, 0f, 0f,
                 128, 14, 128, 16, reanimated$argb(alpha));

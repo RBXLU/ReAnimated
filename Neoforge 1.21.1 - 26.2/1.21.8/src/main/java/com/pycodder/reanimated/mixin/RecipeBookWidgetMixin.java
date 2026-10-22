@@ -16,6 +16,18 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+/**
+ * Окно книги рецептов: плавное появление и страховка общей трансформации экрана.
+ *
+ * 1. Появление. Ваниль показывает окно мгновенно — здесь оно вырастает из-под
+ *    панели контейнера ({@link RecipeBookAnim}).
+ * 2. Страховка. Ваниль рисует книгу внутри отрисовки экрана, под общим трансформом
+ *    мода, и обычно трогать тут нечего. Но моды на интерфейс выносят отрисовку в
+ *    свой слой с чистой матрицей: тогда инвентарь уезжает по анимации, а книга
+ *    стоит на месте. {@code UiTransform.enforce} накладывает трансформацию только
+ *    если матрица действительно оказалась единичной, поэтому в обычном случае
+ *    ничего не делает и ни с кем не конфликтует.
+ */
 @Mixin(RecipeBookComponent.class)
 public abstract class RecipeBookWidgetMixin {
 
@@ -55,6 +67,7 @@ public abstract class RecipeBookWidgetMixin {
         float p = RecipeBookAnim.progress(reanimated$openedAt);
         if (p >= 1f) return;
         float e = RecipeBookAnim.eased(p);
+        // Пивот — левый край панели: окно раскрывается «из-под» неё, а не из воздуха.
         float px, py;
         if (screen instanceof PanelBounds panel) {
             px = panel.reanimated$panelLeft();
