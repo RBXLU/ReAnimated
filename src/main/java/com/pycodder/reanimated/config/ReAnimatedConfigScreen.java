@@ -16,6 +16,7 @@ import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.screens.ConfirmLinkScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.client.gui.components.Tooltip;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,11 +26,23 @@ import java.util.function.DoubleConsumer;
 import java.util.function.IntConsumer;
 import java.util.function.Supplier;
 
+/**
+ * Экран настроек мода (Minecraft 26.x). В 26.x новая render-state система и у Screen
+ * нет render(GuiGraphics) — поэтому рендер не переопределяем: заголовок и сообщение
+ * живут отдельными StringWidget'ами, остальное рисуют сами виджеты. Только стабильные
+ * примитивы (Button + свой слайдер), без OptionInstance/OptionsList.
+ *
+ * Настройки разбиты на СЕКЦИИ, и показывается всегда ровно одна — переключение
+ * кнопками-вкладками сверху. Одна сплошная сетка на все опции (~605 px в высоту) не
+ * помещается на экранах 540 px и ниже, а прокрутки у экрана нет; самая высокая
+ * секция — 4 ряда, всё влезает даже в 320×240.
+ */
 public class ReAnimatedConfigScreen extends Screen {
 
     private static final String AUTHOR_URL = "https://modrinth.com/user/pycodder";
     private static final String TESTED_URL = "https://github.com/RBXLU/ReAnimated/blob/main/testedmods.txt";
 
+    /** Ключи вкладок в порядке отображения. */
     private static final String[] TABS = {
         "reanimated.tab.general",
         "reanimated.tab.menu",
@@ -40,10 +53,13 @@ public class ReAnimatedConfigScreen extends Screen {
         "reanimated.tab.tabs",
         "reanimated.tab.transitions",
         "reanimated.tab.popups",
+        "reanimated.tab.hud",
     };
 
     private final Screen parent;
+    /** Строка с результатом обмена настройками; создаётся заново в каждом init(). */
     private StringWidget notice;
+    /** Выбранная секция. Статическое — чтобы при возврате из Студии/Редактора остаться на месте. */
     private static int section = 0;
 
     public ReAnimatedConfigScreen(Screen parent) {
@@ -55,6 +71,9 @@ public class ReAnimatedConfigScreen extends Screen {
     protected void init() {
         ReAnimatedConfig c = ReAnimatedConfig.get();
 
+        // --- Ссылки сверху ---
+        // Ширина по надписи, а не фиксированная: "Протестированные моды" в 116 px не
+        // влезала и ваниль обрезала её прямо посреди слова.
         Component author = Component.literal("mod by @pycodder");
         Component tested = Component.translatable("reanimated.opt.tested_mods");
         int authorW = this.font.width(author) + 10;
@@ -66,16 +85,19 @@ public class ReAnimatedConfigScreen extends Screen {
                         b -> ConfirmLinkScreen.confirmLinkNow(this, TESTED_URL))
                 .bounds(this.width - 4 - testedW, 4, testedW, 16).build());
 
+        // Заголовок: ниже кнопок-ссылок (y=4..20), поэтому с ними не пересекается.
         StringWidget titleWidget = new StringWidget(this.title, this.font);
         titleWidget.setWidth(this.width);
         titleWidget.setX(0);
         titleWidget.setY(24);
         addRenderableWidget(titleWidget);
 
+        // --- Кнопки-вкладки: два ряда по три ---
         int tabW = Math.min(110, (this.width - 40) / 3);
         int tabGap = 6;
         int tabsRowW = tabW * 3 + tabGap * 2;
         int tabsX = (this.width - tabsRowW) / 2;
+        // Сколько рядов вкладок реально получилось — из этого считается верх списка опций.
         int tabRows = (TABS.length + 2) / 3;
         for (int i = 0; i < TABS.length; i++) {
             int col = i % 3;
@@ -85,18 +107,19 @@ public class ReAnimatedConfigScreen extends Screen {
                 section = idx;
                 rebuildWidgets();
             }).bounds(tabsX + col * (tabW + tabGap), 38 + row * 22, tabW, 20).build();
-            b.active = (i != section);
+            b.active = (i != section); // текущая вкладка не нажимается — так видно, где мы
             addRenderableWidget(b);
         }
 
+        // --- Строки выбранной секции ---
         List<AbstractWidget> rows = new ArrayList<>();
         switch (section) {
-            case 1 -> {
+            case 1 -> { // Меню
                 rows.add(toggle("reanimated.opt.screen_enabled", () -> c.screenOpenEnabled, v -> c.screenOpenEnabled = v));
                 rows.add(slider("reanimated.opt.screen_distance", 0, 80, c.screenOpenDistance, " px", v -> c.screenOpenDistance = (float) v));
                 rows.add(easing("reanimated.opt.screen_easing", () -> c.screenOpenEasing, v -> c.screenOpenEasing = v));
             }
-            case 2 -> {
+            case 2 -> { // Меню паузы
                 rows.add(toggle("reanimated.opt.pause_enabled", () -> c.pauseEnabled, v -> c.pauseEnabled = v));
                 rows.add(cycler("reanimated.opt.pause_preset", () -> c.pausePreset, v -> c.pausePreset = v,
                         UiPreset.values(), p -> p.display));
@@ -104,12 +127,12 @@ public class ReAnimatedConfigScreen extends Screen {
                 rows.add(slider("reanimated.opt.pause_distance", 0, 80, c.pauseDistance, " px", v -> c.pauseDistance = (float) v));
                 rows.add(easing("reanimated.opt.pause_easing", () -> c.pauseEasing, v -> c.pauseEasing = v));
             }
-            case 3 -> {
+            case 3 -> { // Контейнеры
                 rows.add(toggle("reanimated.opt.container_enabled", () -> c.containerEnabled, v -> c.containerEnabled = v));
                 rows.add(slider("reanimated.opt.container_distance", 0, 120, c.containerDistance, " px", v -> c.containerDistance = (float) v));
                 rows.add(easing("reanimated.opt.container_easing", () -> c.containerEasing, v -> c.containerEasing = v));
             }
-            case 4 -> {
+            case 4 -> { // Курсор
                 rows.add(toggle("reanimated.opt.hover_enabled", () -> c.hoverEnabled, v -> c.hoverEnabled = v));
                 rows.add(slider("reanimated.opt.hover_scale", 0.0, 0.3, c.hoverScale, "", v -> c.hoverScale = (float) v));
                 rows.add(slider("reanimated.opt.hover_speed", 2, 30, c.hoverSpeed, "", v -> c.hoverSpeed = (float) v));
@@ -118,12 +141,16 @@ public class ReAnimatedConfigScreen extends Screen {
                 rows.add(slider("reanimated.opt.press_duration", 0.05, 0.6, c.pressDuration, " s", v -> c.pressDuration = (float) v));
                 rows.add(toggle("reanimated.opt.slot_enabled", () -> c.slotHighlightEnabled, v -> c.slotHighlightEnabled = v));
                 rows.add(slider("reanimated.opt.slot_speed", 4, 40, c.slotHighlightSpeed, "", v -> c.slotHighlightSpeed = (float) v));
+                rows.add(toggle("reanimated.opt.widgets_enabled", () -> c.widgetsEnabled, v -> c.widgetsEnabled = v));
+                rows.add(slider("reanimated.opt.widget_speed", 4, 40, c.widgetSpeed, "", v -> c.widgetSpeed = (float) v));
             }
-            case 5 -> {
+            case 5 -> { // Логотип
                 rows.add(toggle("reanimated.opt.logo_enabled", () -> c.logoEnabled, v -> c.logoEnabled = v));
                 rows.add(cycler("reanimated.opt.logo_style", () -> c.logoStyle, v -> c.logoStyle = v, LogoStyle.values(), s -> s.display));
+                // Стиль GROW — родная анимация "вырастания"
                 rows.add(slider("reanimated.opt.logo_duration", 0.1, 2.0, c.logoDuration, " s", v -> c.logoDuration = (float) v));
                 rows.add(easing("reanimated.opt.logo_easing", () -> c.logoEasing, v -> c.logoEasing = v));
+                // Стиль LETTERS — побуквенный каскад
                 rows.add(intSlider("reanimated.opt.logo_letter_duration", 50, 1200, c.profileLogo.durationMs, " ms", v -> c.profileLogo.durationMs = v));
                 rows.add(intSlider("reanimated.opt.logo_letter_delay", 0, 300, c.profileLogo.cascadeDelayMs, " ms", v -> c.profileLogo.cascadeDelayMs = v));
                 rows.add(slider("reanimated.opt.logo_letter_offset", -60, 60, c.profileLogo.offsetY, " px", v -> c.profileLogo.offsetY = (float) v));
@@ -131,14 +158,18 @@ public class ReAnimatedConfigScreen extends Screen {
                         v -> c.profileLogo.cascadeOrder = v, CascadeOrder.values(), o -> o.display));
                 rows.add(easing("reanimated.opt.logo_letter_easing", () -> c.profileLogo.easing, v -> c.profileLogo.easing = v));
             }
-            case 6 -> {
+            case 6 -> { // Вкладки
                 rows.add(toggle("reanimated.opt.tabs_enabled", () -> c.tabsEnabled, v -> c.tabsEnabled = v));
                 rows.add(intSlider("reanimated.opt.tabs_duration", 50, 1200, c.profileTabs.durationMs, " ms", v -> c.profileTabs.durationMs = v));
                 rows.add(intSlider("reanimated.opt.tabs_delay", 0, 300, c.profileTabs.cascadeDelayMs, " ms", v -> c.profileTabs.cascadeDelayMs = v));
                 rows.add(slider("reanimated.opt.tabs_offset", -120, 120, c.profileTabs.offsetY, " px", v -> c.profileTabs.offsetY = (float) v));
                 rows.add(easing("reanimated.opt.tabs_easing", () -> c.profileTabs.easing, v -> c.profileTabs.easing = v));
+                rows.add(toggle("reanimated.opt.tab_switch_enabled", () -> c.tabSwitchEnabled, v -> c.tabSwitchEnabled = v));
+                rows.add(intSlider("reanimated.opt.tab_switch_duration", 50, 600, c.tabSwitchDurationMs, " ms", v -> c.tabSwitchDurationMs = v));
+                rows.add(slider("reanimated.opt.tab_switch_distance", 0, 80, c.tabSwitchDistance, " px", v -> c.tabSwitchDistance = (float) v));
+                rows.add(easing("reanimated.opt.tab_switch_easing", () -> c.tabSwitchEasing, v -> c.tabSwitchEasing = v));
             }
-            case 7 -> {
+            case 7 -> { // Переходы между экранами
                 rows.add(toggle("reanimated.opt.transition_enabled", () -> c.transitionEnabled, v -> c.transitionEnabled = v));
                 rows.add(cycler("reanimated.opt.transition_style", () -> c.transitionStyle, v -> c.transitionStyle = v,
                         TransitionStyle.values(), t -> t.display));
@@ -146,13 +177,15 @@ public class ReAnimatedConfigScreen extends Screen {
                 rows.add(slider("reanimated.opt.transition_distance", 0, 120, c.transitionDistance, " px", v -> c.transitionDistance = (float) v));
                 rows.add(easing("reanimated.opt.transition_easing", () -> c.transitionEasing, v -> c.transitionEasing = v));
             }
-            case 8 -> {
+            case 8 -> { // Всплывающие окна
                 rows.add(toggle("reanimated.opt.tooltip_enabled", () -> c.tooltipEnabled, v -> c.tooltipEnabled = v));
                 rows.add(intSlider("reanimated.opt.tooltip_duration", 30, 500, c.tooltipDurationMs, " ms", v -> c.tooltipDurationMs = v));
                 rows.add(slider("reanimated.opt.tooltip_scale", 0.5, 1.0, c.tooltipScale, "", v -> c.tooltipScale = (float) v));
                 rows.add(slider("reanimated.opt.tooltip_offset", -20, 20, c.tooltipOffsetY, " px", v -> c.tooltipOffsetY = (float) v));
                 rows.add(easing("reanimated.opt.tooltip_easing", () -> c.tooltipEasing, v -> c.tooltipEasing = v));
                 rows.add(toggle("reanimated.opt.toast_enabled", () -> c.toastEnabled, v -> c.toastEnabled = v));
+                // Дольше ванильных 600 мс уведомление растянуть нельзя: мод переиспользует
+                // ванильный таймер, а не заводит свой.
                 rows.add(intSlider("reanimated.opt.toast_duration", 100, 600, c.toastDurationMs, " ms", v -> c.toastDurationMs = v));
                 rows.add(easing("reanimated.opt.toast_easing", () -> c.toastEasing, v -> c.toastEasing = v));
                 rows.add(toggle("reanimated.opt.recipebook_enabled", () -> c.recipeBookEnabled, v -> c.recipeBookEnabled = v));
@@ -161,7 +194,13 @@ public class ReAnimatedConfigScreen extends Screen {
                 rows.add(slider("reanimated.opt.recipebook_offset", 0, 40, c.recipeBookOffsetX, " px", v -> c.recipeBookOffsetX = (float) v));
                 rows.add(easing("reanimated.opt.recipebook_easing", () -> c.recipeBookEasing, v -> c.recipeBookEasing = v));
             }
-            default -> {
+            case 9 -> { // HUD
+                rows.add(toggle("reanimated.opt.hotbar_enabled", () -> c.hotbarEnabled, v -> c.hotbarEnabled = v));
+                rows.add(slider("reanimated.opt.hotbar_speed", 4, 40, c.hotbarSpeed, "", v -> c.hotbarSpeed = (float) v));
+                rows.add(toggle("reanimated.opt.hotbar_name_enabled", () -> c.hotbarItemNameEnabled, v -> c.hotbarItemNameEnabled = v));
+            }
+            default -> { // Общее
+                rows.add(pvp(c));
                 rows.add(cycler("reanimated.opt.preset", () -> c.uiPreset, v -> c.uiPreset = v, UiPreset.MAIN, p -> p.display));
                 rows.add(intSlider("reanimated.opt.speed_ticks", 1, 40, c.animationSpeedTicks, " t", v -> c.animationSpeedTicks = v));
                 rows.add(scope("reanimated.opt.animate_scope", () -> c.animateModdedScreens, v -> c.animateModdedScreens = v));
@@ -183,6 +222,7 @@ public class ReAnimatedConfigScreen extends Screen {
                 rows.add(Button.builder(Component.translatable("reanimated.opt.screens"),
                                 b -> this.minecraft.gui.setScreen(new ScreenRulesScreen(this)))
                         .bounds(0, 0, 158, 20).build());
+                // Расширения: анимации и кнопки других модов появляются здесь сами.
                 java.util.List<CustomPreset> extensionPresets = ReAnimatedApi.presets();
                 if (!extensionPresets.isEmpty()) {
                     rows.add(extensionPreset(c, extensionPresets));
@@ -191,6 +231,8 @@ public class ReAnimatedConfigScreen extends Screen {
                     rows.add(Button.builder(Component.literal(entry.label()),
                                     b -> {
                                         ReAnimatedApi.openEntry(entry, this);
+                                        // Кнопка расширения может не открывать экран, а
+                                        // что-то переключать — тогда надпись обновляем сразу.
                                         rebuildWidgets();
                                     })
                             .bounds(0, 0, 158, 20).build());
@@ -202,6 +244,8 @@ public class ReAnimatedConfigScreen extends Screen {
         int gap = 12, rowH = 20, vgap = 3;
         int totalW = colW * 2 + gap;
         int startX = (this.width - totalW) / 2;
+        // Ниже последнего ряда вкладок, а не по константе: иначе при трёх рядах вкладок
+        // последний налез бы на первую строку настроек.
         int startY = 38 + tabRows * 22 + 6;
         for (int i = 0; i < rows.size(); i++) {
             int col = i % 2;
@@ -227,10 +271,17 @@ public class ReAnimatedConfigScreen extends Screen {
         return Component.translatable(TABS[i]);
     }
 
+    // ------------------------------------------------------------------ расширения
+
+    /**
+     * Кнопка выбора анимации из другого мода: перебирает «не используется» и все
+     * добавленные расширениями анимации. Появляется, только когда есть из чего выбирать.
+     */
     private Button extensionPreset(ReAnimatedConfig c, java.util.List<CustomPreset> presets) {
         return Button.builder(extensionLabel(c, presets), b -> {
             int next = (extensionIndex(c, presets) + 1) % (presets.size() + 1);
             if (next == 0) {
+                // Снимаем выбор, но общий пресет трогаем, только если он и был чужим.
                 if (c.uiPreset == UiPreset.CUSTOM) c.uiPreset = UiPreset.DEFAULT;
                 c.customPresetId = "";
             } else {
@@ -258,6 +309,15 @@ public class ReAnimatedConfigScreen extends Screen {
         return Component.translatable("reanimated.opt.custom_preset").append(Component.literal(": ")).append(value);
     }
 
+    // ------------------------------------------------------------------ строки
+
+    /** PvP-режим — с подсказкой: по одному названию не понять, что именно он меняет. */
+    private Button pvp(ReAnimatedConfig c) {
+        Button b = toggle("reanimated.opt.pvp_mode", () -> c.pvpMode, v -> c.pvpMode = v);
+        b.setTooltip(Tooltip.create(Component.translatable("reanimated.tip.pvp_mode")));
+        return b;
+    }
+
     private Button toggle(String key, BooleanSupplier get, Consumer<Boolean> set) {
         return Button.builder(boolLabel(key, get.getAsBoolean()), b -> {
             boolean nv = !get.getAsBoolean();
@@ -267,6 +327,7 @@ public class ReAnimatedConfigScreen extends Screen {
         }).bounds(0, 0, 158, 20).build();
     }
 
+    /** Переключатель "Весь интерфейс / Только ванильные". true = анимировать и моды. */
     private Button scope(String key, BooleanSupplier get, Consumer<Boolean> set) {
         return Button.builder(scopeLabel(key, get.getAsBoolean()), b -> {
             boolean nv = !get.getAsBoolean();
@@ -276,6 +337,7 @@ public class ReAnimatedConfigScreen extends Screen {
         }).bounds(0, 0, 158, 20).build();
     }
 
+    /** Кнопка-перебор значений enum по кругу с подписью из {@code display}. */
     private <T extends Enum<T>> Button cycler(String key, Supplier<T> get, Consumer<T> set,
                                               T[] values, java.util.function.Function<T, String> display) {
         return Button.builder(enumLabel(key, display.apply(get.get())), b -> {
@@ -315,21 +377,31 @@ public class ReAnimatedConfigScreen extends Screen {
         return Component.translatable(key).append(Component.literal(": " + display));
     }
 
+    /** Кладёт все настройки в буфер обмена одной строкой — можно передать другому игроку. */
     private void exportSettings() {
         this.minecraft.keyboardHandler.setClipboard(ReAnimatedConfig.get().toShareString());
         this.showNotice("reanimated.opt.export.done", false);
     }
 
+    /**
+     * Забирает настройки из буфера обмена. Экран после этого пересобирается: кнопки и
+     * слайдеры читают значения в момент создания, иначе показывали бы старые.
+     */
     private void importSettings() {
         String text = this.minecraft.keyboardHandler.getClipboard();
         if (ReAnimatedConfig.applyShareString(text)) {
-            this.rebuildWidgets();
+            this.rebuildWidgets();   // пересборка создаёт notice заново — сообщение ставим после
             this.showNotice("reanimated.opt.import.done", false);
         } else {
             this.showNotice("reanimated.opt.import.failed", true);
         }
     }
 
+    /**
+     * Показывает результат обмена настройками. В 26.x у экрана нет render(GuiGraphics),
+     * поэтому сообщение живёт отдельным виджетом и висит до закрытия экрана, а не гаснет
+     * по таймеру.
+     */
     private void showNotice(String key, boolean error) {
         if (this.notice != null) {
             this.notice.setMessage(Component.translatable(key)
@@ -342,6 +414,7 @@ public class ReAnimatedConfigScreen extends Screen {
         this.minecraft.setScreenAndShow(parent);
     }
 
+    /** Слайдер на стабильном AbstractSliderButton (value: 0..1). */
     private static class ConfigSlider extends AbstractSliderButton {
         private final String key;
         private final double min;
@@ -373,6 +446,7 @@ public class ReAnimatedConfigScreen extends Screen {
         }
     }
 
+    /** Целочисленный слайдер (длительности в мс, скорость анимации в тиках). */
     private static class IntSlider extends AbstractSliderButton {
         private final String key;
         private final int min;

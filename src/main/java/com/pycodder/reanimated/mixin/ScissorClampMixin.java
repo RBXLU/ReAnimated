@@ -10,6 +10,22 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+/**
+ * Чинит краш "Scissor size must be >0" на Minecraft 26.2.
+ *
+ * Ваниль переводит область обрезки в пиксели кадра так:
+ * <pre>
+ *   top    = area.top()    * guiScale;                        // без ограничения
+ *   bottom = min(area.bottom() * guiScale, window.height);     // с ограничением
+ * </pre>
+ * Нижняя граница ограничена размером окна, а верхняя — нет. Поэтому область, уехавшая
+ * ниже экрана, даёт отрицательную высоту, и 26.2 роняет игру вместо пропуска отрисовки.
+ *
+ * Мод анимирует экраны сдвигом, и ванильная обрезка списков едет вместе с ними — на
+ * невысоком экране (или сразу после переключения полноэкранного режима по F11) она может
+ * выйти за нижнюю границу. Здесь повторяем ванильную арифметику и, если область
+ * выродилась, пропускаем установку обрезки: рисовать в ней всё равно нечего.
+ */
 @Mixin(GuiRenderer.class)
 public class ScissorClampMixin {
 
@@ -23,7 +39,7 @@ public class ScissorClampMixin {
         try {
             window = Minecraft.getInstance().gameRenderer.gameRenderState().windowRenderState;
         } catch (Throwable ignored) {
-            return;
+            return; // не смогли проверить — не мешаем ванили
         }
         if (window == null || window.guiScale <= 0) {
             return;
