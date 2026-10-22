@@ -11,6 +11,30 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+/**
+ * Фон за экраном на время закрытия — Blur+.
+ *
+ * Пока ReAnimated отыгрывает закрытие в мир, ванильный фон за экраном не рисуется, а
+ * вместо него фон рисует сам Blur+ (BlurPlusCompat.renderBackground — тот же вызов,
+ * которым он дорисовывает угасание, когда экрана уже нет). Blur+ решает, проявлять фон
+ * или гасить, по тому, зовёт ли экран в этом кадре методы фона. Отменённый вызов до
+ * него не доходит — он видит «у экрана фона больше нет» и гасит размытие и градиент
+ * одновременно с уходом панели. Без этого фон держался бы в полную силу всё закрытие
+ * и начинал бы гаснуть, только когда панель уже уехала.
+ *
+ * Перехват стоит на «листовых» методах фона, а не на extractBackground: многие экраны
+ * переопределяют extractBackground и зовут их напрямую, мимо super (так устроено,
+ * например, меню паузы). И это ровно те методы, на начале которых стоят хуки Blur+.
+ *
+ * Отдельный миксин — ради приоритета. На HEAD одного метода колбэки разных модов идут
+ * в порядке применения миксинов: миксин с МЕНЬШИМ приоритетом применяется раньше, и
+ * его колбэк оказывается дальше от тела метода — то есть срабатывает ПЕРВЫМ. У Blur+
+ * приоритет по умолчанию (1000), у ScreenMixin — 1500, и с ним Blur+ отметил бы
+ * фон раньше, чем мы отменим вызов. Здесь 500: наша отмена срабатывает до Blur+.
+ *
+ * Только закрытие в мир: при переходе на другой экран фон у следующего такой же, и
+ * гасить его незачем. Без Blur+ этот миксин ничего не делает.
+ */
 @Mixin(value = Screen.class, priority = 500)
 public abstract class ScreenBackgroundMixin {
 
@@ -18,6 +42,9 @@ public abstract class ScreenBackgroundMixin {
     private boolean reanimated$blurTakesOver(GuiGraphicsExtractor extractor) {
         if (!Anim.isClosing() || Anim.isTransitioning()) return false;
         if (!BlurPlusCompat.present() || !Anim.shouldAnimate(this)) return false;
+        // Фон — в неподвижной системе координат, как и ванильный (см. UiTransform.pushBase).
+        // Blur+ сам следит, чтобы за кадр фон был нарисован один раз, поэтому звать его из
+        // каждого отменённого метода безопасно.
         boolean pushed = UiTransform.pushBase(extractor.pose());
         boolean drawn = BlurPlusCompat.renderBackground(extractor);
         if (pushed) UiTransform.popBase(extractor.pose());
@@ -35,6 +62,7 @@ public abstract class ScreenBackgroundMixin {
         if (reanimated$blurTakesOver(extractor)) ci.cancel();
     }
 
+    /** Экраны «в игре» (контейнеры без размытия и т.п.) рисуют фон этим методом. */
     @Inject(method = "extractTransparentBackground", at = @At("HEAD"), cancellable = true)
     private void reanimated$transparentBg(GuiGraphicsExtractor extractor, CallbackInfo ci) {
         if (reanimated$blurTakesOver(extractor)) ci.cancel();
