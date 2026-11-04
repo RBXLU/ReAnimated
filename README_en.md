@@ -24,6 +24,14 @@ Animations apply to **all** Minecraft screens and buttons automatically — not 
    - [Fabric API](https://modrinth.com/mod/fabric-api) for 1.21.1
 3. Launch the game with the Fabric 1.21.1 profile.
 
+## Source branches
+
+`main` holds the docs, licenses and release notes. The source code of each build lives in its own branch, with the Gradle project at the branch root:
+
+- Fabric / Quilt: `1.21.1`, `1.21.2`, `1.21.3`, `1.21.4`, `1.21.5`, `1.21.6`, `1.21.7`, `1.21.8`, `1.21.9`, `1.21.10`, `1.21.11`, `26.1.2`, `26.2`, `26.3`
+- NeoForge: `1.21.1_NeoForge`, `1.21.3_NeoForge`, `1.21.4_NeoForge`, `1.21.5_NeoForge`, `1.21.8_NeoForge`, `1.21.10_NeoForge`, `1.21.11_NeoForge`
+- Snapshots: `26.4_Snapshot6_Alpha`
+
 ## Building from source
 
 Building requires **JDK 21** (Minecraft 1.21.1 specifically requires it, and Fabric Loom requires Gradle itself to run on Java 21, not just the toolchain).
